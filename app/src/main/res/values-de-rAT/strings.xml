@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">RevLog</string>
+    <string name="back">Zurück</string>
+    <string name="cancel">Abbrechen</string>
+    <string name="save">Speichern</string>
+    <string name="create">Erstellen</string>
+    <string name="delete">Löschen</string>
+    <string name="edit">Bearbeiten</string>
+    <string name="settings">Einstellungen</string>
+    <string name="name">Name</string>
+    <string name="discard">Verwerfen</string>
+    <string name="save_changes">Änderungen speichern</string>
+    <string name="unsaved_changes_title">Ungespeicherte Änderungen</string>
+    <string name="unsaved_changes_message">Änderungen vor dem Verlassen speichern?</string>
+    <string name="empty">—</string>
+
+    <string name="vehicle_type_car">Auto</string>
+    <string name="vehicle_type_motorcycle">Motorrad</string>
+    <string name="new_vehicle">Neues Fahrzeug</string>
+    <string name="create_vehicle_hint">Füge dein erstes Fahrzeug mit dem + Button hinzu.</string>
+    <string name="rename">Umbenennen</string>
+    <string name="export_vehicle">Exportieren</string>
+    <string name="delete_vehicle_title">Fahrzeug löschen?</string>
+    <string name="delete_vehicle_message">Alle Daten und der Serviceverlauf werden gelöscht.</string>
+
+    <string name="tab_data">Daten</string>
+    <string name="tab_service">Service</string>
+    <string name="license_plate">Kennzeichen</string>
+    <string name="vin">FIN</string>
+    <string name="first_registration">Erstzulassung</string>
+    <string name="purchased_at">Gekauft am</string>
+    <string name="purchased_km">KM-Stand beim Kauf</string>
+    <string name="tire_dimensions">Reifendimensionen</string>
+    <string name="tire_pressure">Reifendruck</string>
+    <string name="tire_pressure_front">Vorne</string>
+    <string name="tire_pressure_rear">Hinten</string>
+    <string name="tire_pressure_loaded">Beladen</string>
+    <string name="tire_pressure_unladen">Unbeladen</string>
+    <string name="power_kw">kW</string>
+    <string name="power_ps">PS</string>
+    <string name="displacement">Hubraum</string>
+    <string name="engine_oil">Motoröl</string>
+    <string name="brake_fluid">Bremsflüssigkeit</string>
+    <string name="km_unit">km</string>
+    <string name="cc_unit">ccm</string>
+
+    <string name="service_tire_change">Reifenwechsel</string>
+    <string name="service_oil_change">Motorölwechsel</string>
+    <string name="service_brake_fluid">Bremsflüssigkeitwechsel</string>
+    <string name="service_chain_replacement">Kettenwechsel</string>
+    <string name="service_chain_service">Kettenservice</string>
+    <string name="service_inspection">Pickerl</string>
+    <string name="logs">Logs</string>
+    <string name="add_entry">Eintrag hinzufügen</string>
+    <string name="service_date">Datum</string>
+    <string name="odometer">KM-Stand</string>
+    <string name="note">Notiz</string>
+    <string name="delete_entry_title">Eintrag löschen?</string>
+    <string name="no_logs">Noch keine Einträge.</string>
+
+    <string name="language">Sprache</string>
+    <string name="export_data">Daten exportieren</string>
+    <string name="import_data">Daten importieren</string>
+    <string name="about">Über</string>
+    <string name="version">Version %1$s</string>
+    <string name="export_select_vehicles">Fahrzeuge auswählen</string>
+    <string name="export_all">Alle auswählen</string>
+    <string name="share">Teilen</string>
+    <string name="save_file">Datei speichern</string>
+    <string name="import_review_title">Import</string>
+    <string name="import_review_summary">%1$d Fahrzeug(e) gefunden</string>
+    <string name="import_conflict_add">Neu hinzufügen</string>
+    <string name="import_conflict_update">Vorhandenes aktualisieren</string>
+    <string name="import_confirm">Importieren</string>
+    <string name="import_success">%1$d Fahrzeug(e) importiert</string>
+    <string name="import_error_invalid">Ungültige oder nicht unterstützte Datei.</string>
+    <string name="export_error">Export fehlgeschlagen.</string>
+</resources>

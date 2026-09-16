@@ -1,0 +1,1 @@
+# RevLog ProGuard rules
