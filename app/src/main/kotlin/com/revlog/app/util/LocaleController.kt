@@ -12,9 +12,9 @@ object LocaleController {
         tag?.takeIf { it in LocalePreferences.SUPPORTED_TAGS } ?: LocalePreferences.DEFAULT_TAG
 
     fun apply(languageTag: String) {
-        AppCompatDelegate.setApplicationLocales(
-            LocaleListCompat.forLanguageTags(normalizeTag(languageTag)),
-        )
+        val desired = LocaleListCompat.forLanguageTags(normalizeTag(languageTag))
+        if (AppCompatDelegate.getApplicationLocales() == desired) return
+        AppCompatDelegate.setApplicationLocales(desired)
     }
 
     fun applyStored(context: Context) {

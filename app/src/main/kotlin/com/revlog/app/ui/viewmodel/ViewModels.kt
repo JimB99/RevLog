@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.revlog.data.backup.RevLogBackupManager
+import com.revlog.data.locale.LocalePreferences
 import com.revlog.data.repository.SettingsRepository
 import com.revlog.data.repository.VehicleRepository
 import com.revlog.domain.ServiceSummaryResolver
@@ -201,9 +202,7 @@ class SettingsViewModel @Inject constructor(
     val settings = settingsRepository.settings
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), com.revlog.data.repository.AppSettings())
 
-    fun setLanguage(tag: String) {
-        viewModelScope.launch {
-            settingsRepository.setLanguage(tag)
-        }
+    suspend fun setLanguage(tag: String) {
+        settingsRepository.setLanguage(LocalePreferences.normalizeTag(tag))
     }
 }

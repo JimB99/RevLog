@@ -154,17 +154,27 @@ fun VehiclesHomeScreen(
                         label = { Text(stringResource(R.string.name)) },
                         modifier = Modifier.fillMaxWidth(),
                     )
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { newType = VehicleType.CAR },
+                    ) {
                         RadioButton(
                             selected = newType == VehicleType.CAR,
-                            onClick = { newType = VehicleType.CAR },
+                            onClick = null,
                         )
                         Text(stringResource(R.string.vehicle_type_car))
                     }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { newType = VehicleType.MOTORCYCLE },
+                    ) {
                         RadioButton(
                             selected = newType == VehicleType.MOTORCYCLE,
-                            onClick = { newType = VehicleType.MOTORCYCLE },
+                            onClick = null,
                         )
                         Text(stringResource(R.string.vehicle_type_motorcycle))
                     }

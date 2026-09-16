@@ -146,7 +146,6 @@ fun LanguageSettingsScreen(
                     .clickable(enabled = !selected) {
                         scope.launch {
                             viewModel.setLanguage(tag)
-                            LocaleController.apply(tag)
                         }
                     },
             )
