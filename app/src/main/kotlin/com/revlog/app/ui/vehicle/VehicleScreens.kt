@@ -215,11 +215,15 @@ private fun DatenTab(
             stringResource(R.string.purchased_km),
             data?.purchasedKm?.let { "$it ${stringResource(R.string.km_unit)}" } ?: formatOptional(null),
         )
-        Text(stringResource(R.string.tire_dimensions), style = MaterialTheme.typography.titleSmall)
         if (vehicleType != null) {
-            TireSetsReadOnlySection(
-                tireSets = data?.tireSets ?: emptyList(),
-                vehicleType = vehicleType,
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.tire_dimensions)) },
+                supportingContent = {
+                    TireSetsReadOnlySection(
+                        tireSets = data?.tireSets ?: emptyList(),
+                        vehicleType = vehicleType,
+                    )
+                },
             )
         }
         DataRow(

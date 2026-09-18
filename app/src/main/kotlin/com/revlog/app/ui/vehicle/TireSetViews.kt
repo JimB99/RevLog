@@ -32,10 +32,7 @@ fun TireSetsReadOnlySection(
     vehicleType: VehicleType,
 ) {
     if (tireSets.isEmpty()) {
-        Text(
-            text = stringResource(R.string.empty),
-            modifier = Modifier.padding(vertical = 4.dp),
-        )
+        Text(text = stringResource(R.string.empty))
         return
     }
     tireSets.forEachIndexed { index, set ->

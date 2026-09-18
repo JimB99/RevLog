@@ -39,6 +39,9 @@ fun ReminderSetupSheet(
     var enabled by remember(existing) { mutableStateOf(existing?.enabled ?: true) }
     var intervalMonths by remember(existing) { mutableIntStateOf(existing?.intervalMonths ?: 12) }
     var leadDays by remember(existing) { mutableIntStateOf(existing?.leadDays ?: 14) }
+    var leadDaysText by remember(existing) {
+        mutableStateOf((existing?.leadDays ?: 14).toString())
+    }
     var customInterval by remember(existing) {
         mutableStateOf(existing?.intervalMonths?.toString() ?: "12")
     }
@@ -77,21 +80,25 @@ fun ReminderSetupSheet(
                 modifier = Modifier.fillMaxWidth(),
             )
             OutlinedTextField(
-                value = leadDays.toString(),
-                onValueChange = { it.toIntOrNull()?.let { days -> leadDays = days } },
+                value = leadDaysText,
+                onValueChange = {
+                    leadDaysText = it
+                    it.toIntOrNull()?.let { days -> leadDays = days }
+                },
                 label = { Text(stringResource(R.string.reminder_lead_days)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
             Button(
                 onClick = {
+                    val resolvedLeadDays = leadDaysText.toIntOrNull() ?: leadDays
                     onSave(
                         ReminderRule(
                             id = existing?.id ?: 0,
                             vehicleId = vehicleId,
                             serviceType = serviceType,
                             intervalMonths = intervalMonths,
-                            leadDays = leadDays,
+                            leadDays = resolvedLeadDays,
                             enabled = enabled,
                             lastNotifiedDueDate = existing?.lastNotifiedDueDate,
                         ),
