@@ -1,0 +1,40 @@
+---
+description: RevLog Android build toolchain and release APK output
+alwaysApply: true
+---
+
+# RevLog — build and release APK
+
+## Tool paths (workspace `.tools/`)
+
+JDK and the Android SDK live under the **Private workspace root** (`../.tools/` from `RevLog/`):
+
+| Tool | Path |
+|------|------|
+| **JDK 17** | `../.tools/jdk-17.0.14+7` |
+| **Android SDK** | `../.tools/android-sdk` |
+
+`RevLog/local.properties` should set `sdk.dir` to the Android SDK.
+
+## Release APK
+
+**Always** build the installable release via `scripts/build_apk.sh` (not raw `assembleRelease` alone). The script runs Gradle and copies the signed APK to a fixed name:
+
+```bash
+cd RevLog
+bash scripts/build_apk.sh
+```
+
+**Output:** `RevLog/dist/RevLog.apk` (arm64-v8a only).
+
+Gradle also writes `app/build/outputs/apk/release/app-release.apk`; treat `dist/RevLog.apk` as the canonical copy for sharing and sideloading.
+
+**Prerequisite:** `keystore/release.keystore` (alias `revlog`, passwords `android`). See `README.md` for one-time `keytool` setup.
+
+## Checks before release
+
+```bash
+bash scripts/check.sh
+```
+
+Or full verify + APK: `./gradlew test` then `bash scripts/build_apk.sh`.

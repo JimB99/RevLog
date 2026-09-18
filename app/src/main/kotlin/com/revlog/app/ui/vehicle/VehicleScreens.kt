@@ -4,6 +4,7 @@ import android.Manifest
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -12,6 +13,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -36,13 +39,16 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
@@ -69,7 +75,7 @@ import com.revlog.domain.model.VehicleData
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun VehicleDetailScreen(
     vehicleId: Long,
@@ -84,8 +90,28 @@ fun VehicleDetailScreen(
     val data by viewModel.vehicleData.collectAsState()
     val summary by viewModel.serviceSummary.collectAsState()
     val reminderRules by viewModel.reminderRules.collectAsState()
-    var selectedTab by remember(initialTab) { mutableIntStateOf(initialTab) }
+    var selectedTab by rememberSaveable(vehicleId) {
+        mutableIntStateOf(initialTab.coerceIn(0, 1))
+    }
+    val pagerState = rememberPagerState(
+        initialPage = selectedTab,
+        pageCount = { 2 },
+    )
+    val scope = rememberCoroutineScope()
     var reminderType by remember { mutableStateOf<ServiceType?>(null) }
+
+    LaunchedEffect(initialTab) {
+        if (initialTab == 1 && pagerState.currentPage != 1) {
+            pagerState.scrollToPage(1)
+            selectedTab = 1
+        }
+    }
+
+    LaunchedEffect(pagerState) {
+        snapshotFlow { pagerState.settledPage }.collect { page ->
+            selectedTab = page
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -100,32 +126,37 @@ fun VehicleDetailScreen(
         },
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            TabRow(selectedTabIndex = selectedTab) {
+            TabRow(selectedTabIndex = pagerState.currentPage) {
                 Tab(
-                    selected = selectedTab == 0,
-                    onClick = { selectedTab = 0 },
+                    selected = pagerState.currentPage == 0,
+                    onClick = { scope.launch { pagerState.animateScrollToPage(0) } },
                     text = { Text(stringResource(R.string.tab_data)) },
                 )
                 Tab(
-                    selected = selectedTab == 1,
-                    onClick = { selectedTab = 1 },
+                    selected = pagerState.currentPage == 1,
+                    onClick = { scope.launch { pagerState.animateScrollToPage(1) } },
                     text = { Text(stringResource(R.string.tab_service)) },
                 )
             }
-            when (selectedTab) {
-                0 -> DatenTab(
-                    data = data,
-                    vehicleType = vehicle?.type,
-                    onEdit = onEditData,
-                )
-                1 -> ServiceTab(
-                    vehicleType = vehicle?.type,
-                    summary = summary,
-                    reminderRules = reminderRules,
-                    onAdd = onAddService,
-                    onLogs = onViewLogs,
-                    onReminder = { reminderType = it },
-                )
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxSize(),
+            ) { page ->
+                when (page) {
+                    0 -> DatenTab(
+                        data = data,
+                        vehicleType = vehicle?.type,
+                        onEdit = onEditData,
+                    )
+                    1 -> ServiceTab(
+                        vehicleType = vehicle?.type,
+                        summary = summary,
+                        reminderRules = reminderRules,
+                        onAdd = onAddService,
+                        onLogs = onViewLogs,
+                        onReminder = { reminderType = it },
+                    )
+                }
             }
         }
     }
