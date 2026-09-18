@@ -16,6 +16,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import com.revlog.app.notification.RevLogNotificationHelper
 import com.revlog.app.ui.RevLogNavHost
 import com.revlog.app.ui.theme.RevLogTheme
 import com.revlog.app.ui.viewmodel.ImportViewModel
@@ -33,11 +34,14 @@ class MainActivity : AppCompatActivity() {
 
     private val importViewModel: ImportViewModel by viewModels()
     private var startImportReview by mutableStateOf(false)
+    private var startVehicleId by mutableStateOf<Long?>(null)
+    private var startOnServiceTab by mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         handleImportIntent(intent)
+        handleNotificationIntent(intent)
 
         setContent {
             val context = LocalContext.current
@@ -52,7 +56,11 @@ class MainActivity : AppCompatActivity() {
 
             RevLogTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    RevLogNavHost(startImportReview = startImportReview)
+                    RevLogNavHost(
+                        startImportReview = startImportReview,
+                        startVehicleId = startVehicleId,
+                        startOnServiceTab = startOnServiceTab,
+                    )
                 }
             }
         }
@@ -62,6 +70,15 @@ class MainActivity : AppCompatActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         handleImportIntent(intent)
+        handleNotificationIntent(intent)
+    }
+
+    private fun handleNotificationIntent(intent: Intent?) {
+        val vehicleId = intent?.getLongExtra(RevLogNotificationHelper.EXTRA_VEHICLE_ID, -1L) ?: -1L
+        if (vehicleId > 0) {
+            startVehicleId = vehicleId
+            startOnServiceTab = intent?.getBooleanExtra(RevLogNotificationHelper.EXTRA_OPEN_SERVICE_TAB, false) == true
+        }
     }
 
     private fun handleImportIntent(intent: Intent?) {

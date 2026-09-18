@@ -44,6 +44,33 @@ data class VehicleDataEntity(
     val displacementCc: Int?,
     val engineOil: String?,
     val brakeFluid: String?,
+    val tireSetsJson: String? = null,
+)
+
+@Entity(
+    tableName = "reminder_rules",
+    foreignKeys = [
+        ForeignKey(
+            entity = VehicleEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["vehicleId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+    ],
+    indices = [
+        Index("vehicleId"),
+        Index(value = ["vehicleId", "serviceType"], unique = true),
+    ],
+)
+data class ReminderRuleEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val vehicleId: Long,
+    val serviceType: String,
+    val intervalMonths: Int,
+    val leadDays: Int = 14,
+    val enabled: Boolean = true,
+    val anchor: String = "LAST_SERVICE_DATE",
+    val lastNotifiedDueDate: String? = null,
 )
 
 @Entity(

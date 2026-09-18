@@ -28,7 +28,8 @@ object Routes {
     const val SETTINGS_EXPORT = "settings/export?ids={ids}"
     const val IMPORT_REVIEW = "settings/import/review"
 
-    fun vehicleDetail(id: Long) = "vehicle/$id"
+    fun vehicleDetail(id: Long, serviceTab: Boolean = false) =
+        if (serviceTab) "vehicle/$id?serviceTab=true" else "vehicle/$id"
     fun vehicleDataEdit(id: Long) = "vehicle/$id/data/edit"
     fun serviceAdd(id: Long, type: ServiceType) = "vehicle/$id/service/${type.name}/add"
     fun serviceLogs(id: Long, type: ServiceType) = "vehicle/$id/service/${type.name}/logs"
@@ -38,12 +39,20 @@ object Routes {
 @Composable
 fun RevLogNavHost(
     startImportReview: Boolean = false,
+    startVehicleId: Long? = null,
+    startOnServiceTab: Boolean = false,
 ) {
     val navController = rememberNavController()
 
     androidx.compose.runtime.LaunchedEffect(startImportReview) {
         if (startImportReview) {
             navController.navigate(Routes.IMPORT_REVIEW)
+        }
+    }
+
+    androidx.compose.runtime.LaunchedEffect(startVehicleId, startOnServiceTab) {
+        startVehicleId?.let { id ->
+            navController.navigate(Routes.vehicleDetail(id, serviceTab = startOnServiceTab))
         }
     }
 
@@ -56,12 +65,17 @@ fun RevLogNavHost(
             )
         }
         composable(
-            route = Routes.VEHICLE_DETAIL,
-            arguments = listOf(navArgument("vehicleId") { type = NavType.LongType }),
+            route = "${Routes.VEHICLE_DETAIL}?serviceTab={serviceTab}",
+            arguments = listOf(
+                navArgument("vehicleId") { type = NavType.LongType },
+                navArgument("serviceTab") { type = NavType.BoolType; defaultValue = false },
+            ),
         ) {
             val vehicleId = it.arguments?.getLong("vehicleId") ?: 0L
+            val serviceTab = it.arguments?.getBoolean("serviceTab") ?: false
             VehicleDetailScreen(
                 vehicleId = vehicleId,
+                initialTab = if (serviceTab) 1 else 0,
                 onBack = { navController.popBackStack() },
                 onEditData = { navController.navigate(Routes.vehicleDataEdit(vehicleId)) },
                 onAddService = { type ->

@@ -1,5 +1,9 @@
 package com.revlog.app.ui.vehicle
 
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -9,9 +13,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -20,6 +28,8 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
@@ -33,11 +43,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.revlog.app.R
+import com.revlog.app.ui.components.FormField
 import com.revlog.app.ui.components.SaveChangesButton
 import com.revlog.app.ui.components.formatDate
 import com.revlog.app.ui.components.formatOptional
@@ -46,6 +60,8 @@ import com.revlog.app.ui.components.serviceTypeLabel
 import com.revlog.app.ui.viewmodel.ServiceEntryViewModel
 import com.revlog.app.ui.viewmodel.ServiceLogsViewModel
 import com.revlog.app.ui.viewmodel.VehicleDetailViewModel
+import com.revlog.app.worker.ReminderCheckWorker
+import com.revlog.domain.DateParser
 import com.revlog.domain.PowerConversion
 import com.revlog.domain.ServiceSummaryResolver
 import com.revlog.domain.model.ServiceType
@@ -57,6 +73,7 @@ import java.time.LocalDate
 @Composable
 fun VehicleDetailScreen(
     vehicleId: Long,
+    initialTab: Int = 0,
     onBack: () -> Unit,
     onEditData: () -> Unit,
     onAddService: (ServiceType) -> Unit,
@@ -66,7 +83,9 @@ fun VehicleDetailScreen(
     val vehicle by viewModel.vehicle.collectAsState()
     val data by viewModel.vehicleData.collectAsState()
     val summary by viewModel.serviceSummary.collectAsState()
-    var selectedTab by remember { mutableIntStateOf(0) }
+    val reminderRules by viewModel.reminderRules.collectAsState()
+    var selectedTab by remember(initialTab) { mutableIntStateOf(initialTab) }
+    var reminderType by remember { mutableStateOf<ServiceType?>(null) }
 
     Scaffold(
         topBar = {
@@ -94,20 +113,51 @@ fun VehicleDetailScreen(
                 )
             }
             when (selectedTab) {
-                0 -> DatenTab(data = data, onEdit = onEditData)
+                0 -> DatenTab(
+                    data = data,
+                    vehicleType = vehicle?.type,
+                    onEdit = onEditData,
+                )
                 1 -> ServiceTab(
                     vehicleType = vehicle?.type,
                     summary = summary,
+                    reminderRules = reminderRules,
                     onAdd = onAddService,
                     onLogs = onViewLogs,
+                    onReminder = { reminderType = it },
                 )
             }
         }
     }
+
+    reminderType?.let { type ->
+        val existing = reminderRules.find { it.serviceType == type }
+        val context = androidx.compose.ui.platform.LocalContext.current
+        val permissionLauncher = rememberLauncherForActivityResult(
+            ActivityResultContracts.RequestPermission(),
+        ) { _ -> }
+        ReminderSetupSheet(
+            serviceType = type,
+            existing = existing,
+            vehicleId = vehicleId,
+            onDismiss = { reminderType = null },
+            onSave = { rule ->
+                viewModel.saveReminderRule(rule)
+                if (rule.enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
+                ReminderCheckWorker.schedule(context)
+            },
+        )
+    }
 }
 
 @Composable
-private fun DatenTab(data: VehicleData?, onEdit: () -> Unit) {
+private fun DatenTab(
+    data: VehicleData?,
+    vehicleType: com.revlog.domain.model.VehicleType?,
+    onEdit: () -> Unit,
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -134,12 +184,13 @@ private fun DatenTab(data: VehicleData?, onEdit: () -> Unit) {
             stringResource(R.string.purchased_km),
             data?.purchasedKm?.let { "$it ${stringResource(R.string.km_unit)}" } ?: formatOptional(null),
         )
-        DataRow(stringResource(R.string.tire_dimensions), formatOptional(data?.tireDimensions))
-        Text(stringResource(R.string.tire_pressure), style = MaterialTheme.typography.titleSmall)
-        DataRow(stringResource(R.string.tire_pressure_front), formatOptional(data?.tirePressureFront))
-        DataRow(stringResource(R.string.tire_pressure_rear), formatOptional(data?.tirePressureRear))
-        DataRow(stringResource(R.string.tire_pressure_loaded), formatOptional(data?.tirePressureLoaded))
-        DataRow(stringResource(R.string.tire_pressure_unladen), formatOptional(data?.tirePressureUnladen))
+        Text(stringResource(R.string.tire_dimensions), style = MaterialTheme.typography.titleSmall)
+        if (vehicleType != null) {
+            TireSetsReadOnlySection(
+                tireSets = data?.tireSets ?: emptyList(),
+                vehicleType = vehicleType,
+            )
+        }
         DataRow(
             "${stringResource(R.string.power_kw)} / ${stringResource(R.string.power_ps)}",
             when {
@@ -170,8 +221,10 @@ private fun DataRow(label: String, value: String) {
 private fun ServiceTab(
     vehicleType: com.revlog.domain.model.VehicleType?,
     summary: Map<ServiceType, LocalDate?>,
+    reminderRules: List<com.revlog.domain.model.ReminderRule>,
     onAdd: (ServiceType) -> Unit,
     onLogs: (ServiceType) -> Unit,
+    onReminder: (ServiceType) -> Unit,
 ) {
     val types = vehicleType?.let { ServiceSummaryResolver.applicableTypes(it) } ?: emptyList()
     Column(
@@ -183,11 +236,14 @@ private fun ServiceTab(
     ) {
         types.forEach { type ->
             val latest = summary[type]
+            val rule = reminderRules.find { it.serviceType == type }
             CardServiceRow(
                 label = serviceTypeLabel(type),
                 date = latest?.let { formatDate(it) } ?: stringResource(R.string.empty),
+                reminderEnabled = rule?.enabled == true,
                 onAdd = { onAdd(type) },
                 onLogs = { onLogs(type) },
+                onReminder = { onReminder(type) },
             )
         }
     }
@@ -197,13 +253,23 @@ private fun ServiceTab(
 private fun CardServiceRow(
     label: String,
     date: String,
+    reminderEnabled: Boolean,
     onAdd: () -> Unit,
     onLogs: () -> Unit,
+    onReminder: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
         ListItem(
             headlineContent = { Text(label) },
             supportingContent = { Text(date) },
+            trailingContent = {
+                IconButton(onClick = onReminder) {
+                    Icon(
+                        imageVector = if (reminderEnabled) Icons.Filled.Notifications else Icons.Outlined.Notifications,
+                        contentDescription = stringResource(R.string.reminder_setup),
+                    )
+                }
+            },
             modifier = Modifier.clickable(onClick = onAdd),
         )
         Row(
@@ -226,22 +292,33 @@ fun VehicleDataEditScreen(
     val vehicle by viewModel.vehicle.collectAsState()
     val initial by viewModel.vehicleData.collectAsState()
     val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val datePlaceholder = stringResource(R.string.date_placeholder)
+    val dateInvalidMessage = stringResource(R.string.date_invalid)
 
     var licensePlate by remember(initial) { mutableStateOf(initial?.licensePlate ?: "") }
     var vin by remember(initial) { mutableStateOf(initial?.vin ?: "") }
-    var firstRegistration by remember(initial) { mutableStateOf(initial?.firstRegistration?.toString() ?: "") }
-    var purchasedAt by remember(initial) { mutableStateOf(initial?.purchasedAt?.toString() ?: "") }
+    var firstRegistration by remember(initial) {
+        mutableStateOf(DateParser.format(initial?.firstRegistration))
+    }
+    var purchasedAt by remember(initial) {
+        mutableStateOf(DateParser.format(initial?.purchasedAt))
+    }
     var purchasedKm by remember(initial) { mutableStateOf(initial?.purchasedKm?.toString() ?: "") }
-    var tireDimensions by remember(initial) { mutableStateOf(initial?.tireDimensions ?: "") }
-    var tirePressureFront by remember(initial) { mutableStateOf(initial?.tirePressureFront ?: "") }
-    var tirePressureRear by remember(initial) { mutableStateOf(initial?.tirePressureRear ?: "") }
-    var tirePressureLoaded by remember(initial) { mutableStateOf(initial?.tirePressureLoaded ?: "") }
-    var tirePressureUnladen by remember(initial) { mutableStateOf(initial?.tirePressureUnladen ?: "") }
+    var tireSets by remember(initial) { mutableStateOf(initial?.tireSets ?: emptyList()) }
     var powerKw by remember(initial) { mutableStateOf(initial?.powerKw?.toString() ?: "") }
     var powerPs by remember(initial) { mutableStateOf(initial?.powerPs?.toString() ?: "") }
     var displacementCc by remember(initial) { mutableStateOf(initial?.displacementCc?.toString() ?: "") }
     var engineOil by remember(initial) { mutableStateOf(initial?.engineOil ?: "") }
     var brakeFluid by remember(initial) { mutableStateOf(initial?.brakeFluid ?: "") }
+    var dateError by remember { mutableStateOf(false) }
+
+    fun dateFieldDirty(text: String, original: LocalDate?): Boolean {
+        val trimmed = text.trim()
+        if (trimmed.isBlank() && original == null) return false
+        val parsed = DateParser.parseOrNull(trimmed)
+        return parsed != original || (trimmed.isNotBlank() && parsed == null)
+    }
 
     fun buildData(): VehicleData? {
         val v = vehicle ?: return null
@@ -249,14 +326,10 @@ fun VehicleDataEditScreen(
             vehicleId = v.id,
             licensePlate = licensePlate.trim().ifBlank { null },
             vin = vin.trim().ifBlank { null },
-            firstRegistration = firstRegistration.trim().takeIf { it.isNotBlank() }?.let(LocalDate::parse),
-            purchasedAt = purchasedAt.trim().takeIf { it.isNotBlank() }?.let(LocalDate::parse),
+            firstRegistration = DateParser.parseOrNull(firstRegistration),
+            purchasedAt = DateParser.parseOrNull(purchasedAt),
             purchasedKm = purchasedKm.trim().toIntOrNull(),
-            tireDimensions = tireDimensions.trim().ifBlank { null },
-            tirePressureFront = tirePressureFront.trim().ifBlank { null },
-            tirePressureRear = tirePressureRear.trim().ifBlank { null },
-            tirePressureLoaded = tirePressureLoaded.trim().ifBlank { null },
-            tirePressureUnladen = tirePressureUnladen.trim().ifBlank { null },
+            tireSets = tireSets,
             powerKw = powerKw.trim().toIntOrNull(),
             powerPs = powerPs.trim().toIntOrNull(),
             displacementCc = displacementCc.trim().toIntOrNull(),
@@ -265,28 +338,48 @@ fun VehicleDataEditScreen(
         )
     }
 
-    val isDirty = initial != null && buildData() != initial
+    val snapshot = initial
+    val isDirty = snapshot != null && (
+        licensePlate.trim() != snapshot.licensePlate.orEmpty().trim() ||
+            vin.trim() != snapshot.vin.orEmpty().trim() ||
+            dateFieldDirty(firstRegistration, snapshot.firstRegistration) ||
+            dateFieldDirty(purchasedAt, snapshot.purchasedAt) ||
+            purchasedKm.trim() != snapshot.purchasedKm?.toString().orEmpty() ||
+            tireSets != snapshot.tireSets ||
+            powerKw.trim() != snapshot.powerKw?.toString().orEmpty() ||
+            powerPs.trim() != snapshot.powerPs?.toString().orEmpty() ||
+            displacementCc.trim() != snapshot.displacementCc?.toString().orEmpty() ||
+            engineOil.trim() != snapshot.engineOil.orEmpty().trim() ||
+            brakeFluid.trim() != snapshot.brakeFluid.orEmpty().trim()
+        )
 
     val backGuard = rememberUnsavedChangesGuard(
         isDirty = isDirty,
         onNavigateBack = onBack,
-        onSave = { buildData()?.let { viewModel.saveVehicleDataAwait(it) } },
+        onSave = {
+            if (!DateParser.isValidDisplayInput(firstRegistration) ||
+                !DateParser.isValidDisplayInput(purchasedAt)
+            ) {
+                dateError = true
+                false
+            } else {
+                buildData()?.let { viewModel.saveVehicleDataAwait(it) }
+                true
+            }
+        },
         onDiscardChanges = {
             licensePlate = initial?.licensePlate ?: ""
             vin = initial?.vin ?: ""
-            firstRegistration = initial?.firstRegistration?.toString() ?: ""
-            purchasedAt = initial?.purchasedAt?.toString() ?: ""
+            firstRegistration = DateParser.format(initial?.firstRegistration)
+            purchasedAt = DateParser.format(initial?.purchasedAt)
             purchasedKm = initial?.purchasedKm?.toString() ?: ""
-            tireDimensions = initial?.tireDimensions ?: ""
-            tirePressureFront = initial?.tirePressureFront ?: ""
-            tirePressureRear = initial?.tirePressureRear ?: ""
-            tirePressureLoaded = initial?.tirePressureLoaded ?: ""
-            tirePressureUnladen = initial?.tirePressureUnladen ?: ""
+            tireSets = initial?.tireSets ?: emptyList()
             powerKw = initial?.powerKw?.toString() ?: ""
             powerPs = initial?.powerPs?.toString() ?: ""
             displacementCc = initial?.displacementCc?.toString() ?: ""
             engineOil = initial?.engineOil ?: ""
             brakeFluid = initial?.brakeFluid ?: ""
+            dateError = false
         },
     )
 
@@ -301,6 +394,7 @@ fun VehicleDataEditScreen(
                 },
             )
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
         Column(
             modifier = Modifier
@@ -313,29 +407,43 @@ fun VehicleDataEditScreen(
         ) {
             FormField(R.string.license_plate, licensePlate) { licensePlate = it }
             FormField(R.string.vin, vin) { vin = it }
-            FormField(R.string.first_registration, firstRegistration, "YYYY-MM-DD") { firstRegistration = it }
-            FormField(R.string.purchased_at, purchasedAt, "YYYY-MM-DD") { purchasedAt = it }
+            FormField(
+                labelRes = R.string.first_registration,
+                value = firstRegistration,
+                placeholder = datePlaceholder,
+                isError = dateError && !DateParser.isValidDisplayInput(firstRegistration),
+                onValueChange = { firstRegistration = it; dateError = false },
+            )
+            FormField(
+                labelRes = R.string.purchased_at,
+                value = purchasedAt,
+                placeholder = datePlaceholder,
+                isError = dateError && !DateParser.isValidDisplayInput(purchasedAt),
+                onValueChange = { purchasedAt = it; dateError = false },
+            )
             FormField(R.string.purchased_km, purchasedKm) { purchasedKm = it }
-            FormField(R.string.tire_dimensions, tireDimensions) { tireDimensions = it }
-            Text(stringResource(R.string.tire_pressure), style = MaterialTheme.typography.titleSmall)
-            FormField(R.string.tire_pressure_front, tirePressureFront) { tirePressureFront = it }
-            FormField(R.string.tire_pressure_rear, tirePressureRear) { tirePressureRear = it }
-            FormField(R.string.tire_pressure_loaded, tirePressureLoaded) { tirePressureLoaded = it }
-            FormField(R.string.tire_pressure_unladen, tirePressureUnladen) { tirePressureUnladen = it }
-            FormField(R.string.power_kw, powerKw) {
-                powerKw = it
-                it.toIntOrNull()?.let { kw -> if (powerPs.isBlank()) powerPs = PowerConversion.kwToPs(kw).toString() }
+            Text(stringResource(R.string.tire_dimensions), style = MaterialTheme.typography.titleSmall)
+            vehicle?.type?.let { type ->
+                TireSetsEditor(
+                    tireSets = tireSets,
+                    vehicleType = type,
+                    onChange = { tireSets = it },
+                )
             }
-            FormField(R.string.power_ps, powerPs) {
-                powerPs = it
-                it.toIntOrNull()?.let { ps -> if (powerKw.isBlank()) powerKw = PowerConversion.psToKw(ps).toString() }
-            }
+            PowerRow(kw = powerKw, ps = powerPs, onKwChange = { powerKw = it }, onPsChange = { powerPs = it })
             FormField(R.string.displacement, displacementCc) { displacementCc = it }
             FormField(R.string.engine_oil, engineOil) { engineOil = it }
             FormField(R.string.brake_fluid, brakeFluid) { brakeFluid = it }
             SaveChangesButton(
                 visible = isDirty,
                 onClick = {
+                    if (!DateParser.isValidDisplayInput(firstRegistration) ||
+                        !DateParser.isValidDisplayInput(purchasedAt)
+                    ) {
+                        dateError = true
+                        scope.launch { snackbarHostState.showSnackbar(dateInvalidMessage) }
+                        return@SaveChangesButton
+                    }
                     scope.launch {
                         buildData()?.let { viewModel.saveVehicleDataAwait(it) }
                         onBack()
@@ -347,19 +455,43 @@ fun VehicleDataEditScreen(
 }
 
 @Composable
-private fun FormField(
-    labelRes: Int,
-    value: String,
-    placeholder: String = "",
-    onValueChange: (String) -> Unit,
+private fun PowerRow(
+    kw: String,
+    ps: String,
+    onKwChange: (String) -> Unit,
+    onPsChange: (String) -> Unit,
 ) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        label = { Text(stringResource(labelRes)) },
-        placeholder = if (placeholder.isNotBlank()) ({ Text(placeholder) }) else null,
+    val focusManager = LocalFocusManager.current
+    Row(
         modifier = Modifier.fillMaxWidth(),
-    )
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        OutlinedTextField(
+            value = kw,
+            onValueChange = {
+                onKwChange(it)
+                it.toIntOrNull()?.let { value -> onPsChange(PowerConversion.kwToPs(value).toString()) }
+            },
+            label = { Text(stringResource(R.string.power_kw)) },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+            modifier = Modifier.weight(1f),
+        )
+        OutlinedTextField(
+            value = ps,
+            onValueChange = {
+                onPsChange(it)
+                it.toIntOrNull()?.let { value -> onKwChange(PowerConversion.psToKw(value).toString()) }
+            },
+            label = { Text(stringResource(R.string.power_ps)) },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+            modifier = Modifier.weight(1f),
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -368,10 +500,14 @@ fun ServiceEntryScreen(
     onBack: () -> Unit,
     viewModel: ServiceEntryViewModel = hiltViewModel(),
 ) {
-    var dateText by remember { mutableStateOf(LocalDate.now().toString()) }
+    var dateText by remember { mutableStateOf(DateParser.format(LocalDate.now())) }
     var odometer by remember { mutableStateOf("") }
     var note by remember { mutableStateOf("") }
+    var dateError by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val datePlaceholder = stringResource(R.string.date_placeholder)
+    val dateInvalidMessage = stringResource(R.string.date_invalid)
 
     Scaffold(
         topBar = {
@@ -384,6 +520,7 @@ fun ServiceEntryScreen(
                 },
             )
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
         Column(
             modifier = Modifier
@@ -394,17 +531,25 @@ fun ServiceEntryScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            FormField(R.string.service_date, dateText, "YYYY-MM-DD") { dateText = it }
+            FormField(
+                labelRes = R.string.service_date,
+                value = dateText,
+                placeholder = datePlaceholder,
+                isError = dateError,
+                onValueChange = { dateText = it; dateError = false },
+            )
             FormField(R.string.odometer, odometer) { odometer = it }
             FormField(R.string.note, note) { note = it }
             Button(
                 onClick = {
+                    val date = DateParser.parseOrNull(dateText)
+                    if (date == null) {
+                        dateError = true
+                        scope.launch { snackbarHostState.showSnackbar(dateInvalidMessage) }
+                        return@Button
+                    }
                     scope.launch {
-                        viewModel.addEntryAwait(
-                            LocalDate.parse(dateText),
-                            odometer.trim().toIntOrNull(),
-                            note,
-                        )
+                        viewModel.addEntryAwait(date, odometer.trim().toIntOrNull(), note)
                         onBack()
                     }
                 },

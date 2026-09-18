@@ -76,4 +76,24 @@
     <string name="import_success">%1$d Fahrzeug(e) importiert</string>
     <string name="import_error_invalid">Ungültige oder nicht unterstützte Datei.</string>
     <string name="export_error">Export fehlgeschlagen.</string>
+
+    <string name="date_invalid">Ungültiges Datum</string>
+    <string name="date_placeholder">TT.MM.JJJJ</string>
+    <string name="tire_front">Vorne</string>
+    <string name="tire_rear">Hinten</string>
+    <string name="tire_add_set">Reifensatz hinzufügen</string>
+    <string name="tire_dimensions_col">Dimensionen</string>
+    <string name="tire_pressure_col">Druck</string>
+    <string name="reminder_setup">Erinnerung einrichten</string>
+    <string name="reminder_interval">Intervall</string>
+    <string name="reminder_lead_days">Vorlauf (Tage)</string>
+    <string name="reminder_enabled">Erinnerung aktiv</string>
+    <string name="reminders">Erinnerungen</string>
+    <string name="interval_6_months">6 Monate</string>
+    <string name="interval_1_year">1 Jahr</string>
+    <string name="interval_2_years">2 Jahre</string>
+    <string name="interval_3_years">3 Jahre</string>
+    <string name="notification_channel_maintenance">Wartung</string>
+    <string name="reminder_notification_title">%1$s — Wartung fällig</string>
+    <string name="reminder_notification_body">%1$s steht an</string>
 </resources>

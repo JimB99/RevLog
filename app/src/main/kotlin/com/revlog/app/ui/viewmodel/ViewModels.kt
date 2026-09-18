@@ -5,8 +5,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.revlog.data.backup.RevLogBackupManager
 import com.revlog.data.locale.LocalePreferences
+import com.revlog.data.repository.ReminderRepository
 import com.revlog.data.repository.SettingsRepository
 import com.revlog.data.repository.VehicleRepository
+import com.revlog.domain.model.ReminderRule
 import com.revlog.domain.ServiceSummaryResolver
 import com.revlog.domain.model.ImportConflictMode
 import com.revlog.domain.model.ServiceLogEntry
@@ -65,6 +67,7 @@ class VehiclesHomeViewModel @Inject constructor(
 class VehicleDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val vehicleRepository: VehicleRepository,
+    private val reminderRepository: ReminderRepository,
 ) : ViewModel() {
     private val vehicleId: Long = savedStateHandle.get<Long>("vehicleId") ?: 0L
 
@@ -81,6 +84,15 @@ class VehicleDetailViewModel @Inject constructor(
         if (v == null) emptyMap()
         else ServiceSummaryResolver.latestByType(logs, v.type)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+
+    val reminderRules = reminderRepository.observeRules(vehicleId)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    fun saveReminderRule(rule: ReminderRule) {
+        viewModelScope.launch {
+            reminderRepository.upsertRule(rule)
+        }
+    }
 
     fun saveVehicleData(data: VehicleData) {
         viewModelScope.launch {
@@ -204,5 +216,11 @@ class SettingsViewModel @Inject constructor(
 
     suspend fun setLanguage(tag: String) {
         settingsRepository.setLanguage(LocalePreferences.normalizeTag(tag))
+    }
+
+    fun setRemindersEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setRemindersEnabled(enabled)
+        }
     }
 }

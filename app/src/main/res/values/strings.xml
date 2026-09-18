@@ -76,4 +76,24 @@
     <string name="import_success">%1$d vehicle(s) imported</string>
     <string name="import_error_invalid">Invalid or unsupported file.</string>
     <string name="export_error">Export failed.</string>
+
+    <string name="date_invalid">Invalid date</string>
+    <string name="date_placeholder">DD.MM.YYYY</string>
+    <string name="tire_front">Front</string>
+    <string name="tire_rear">Rear</string>
+    <string name="tire_add_set">Add tire set</string>
+    <string name="tire_dimensions_col">Dimensions</string>
+    <string name="tire_pressure_col">Pressure</string>
+    <string name="reminder_setup">Set reminder</string>
+    <string name="reminder_interval">Interval</string>
+    <string name="reminder_lead_days">Lead time (days)</string>
+    <string name="reminder_enabled">Reminder enabled</string>
+    <string name="reminders">Reminders</string>
+    <string name="interval_6_months">6 months</string>
+    <string name="interval_1_year">1 year</string>
+    <string name="interval_2_years">2 years</string>
+    <string name="interval_3_years">3 years</string>
+    <string name="notification_channel_maintenance">Maintenance</string>
+    <string name="reminder_notification_title">%1$s — maintenance due</string>
+    <string name="reminder_notification_body">%1$s is due</string>
 </resources>

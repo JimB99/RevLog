@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.map
 
 class VehicleRepository(
     private val database: RevLogDatabase,
+    private val reminderRepository: ReminderRepository,
 ) {
     private val vehicleDao = database.vehicleDao()
     private val vehicleDataDao = database.vehicleDataDao()
@@ -76,8 +77,11 @@ class VehicleRepository(
         vehicleDataDao.upsert(data.toEntity())
     }
 
-    suspend fun addServiceLog(entry: ServiceLogEntry): Long =
-        serviceLogDao.insert(entry.copy(id = 0).toEntity())
+    suspend fun addServiceLog(entry: ServiceLogEntry): Long {
+        val id = serviceLogDao.insert(entry.copy(id = 0).toEntity())
+        reminderRepository.clearLastNotified(entry.vehicleId, entry.type)
+        return id
+    }
 
     suspend fun deleteServiceLog(id: Long) {
         serviceLogDao.deleteById(id)

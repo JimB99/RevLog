@@ -2,10 +2,12 @@ package com.revlog.data.local
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
+import com.revlog.data.local.dao.ReminderDao
 import com.revlog.data.local.dao.ServiceLogDao
 import com.revlog.data.local.dao.VehicleBundleDao
 import com.revlog.data.local.dao.VehicleDao
 import com.revlog.data.local.dao.VehicleDataDao
+import com.revlog.data.local.entity.ReminderRuleEntity
 import com.revlog.data.local.entity.ServiceLogEntryEntity
 import com.revlog.data.local.entity.VehicleDataEntity
 import com.revlog.data.local.entity.VehicleEntity
@@ -15,8 +17,9 @@ import com.revlog.data.local.entity.VehicleEntity
         VehicleEntity::class,
         VehicleDataEntity::class,
         ServiceLogEntryEntity::class,
+        ReminderRuleEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 abstract class RevLogDatabase : RoomDatabase() {
@@ -24,4 +27,5 @@ abstract class RevLogDatabase : RoomDatabase() {
     abstract fun vehicleDataDao(): VehicleDataDao
     abstract fun serviceLogDao(): ServiceLogDao
     abstract fun vehicleBundleDao(): VehicleBundleDao
+    abstract fun reminderDao(): ReminderDao
 }

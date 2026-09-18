@@ -43,7 +43,7 @@ class UnsavedChangesGuardState internal constructor(
 fun rememberUnsavedChangesGuard(
     isDirty: Boolean,
     onNavigateBack: () -> Unit,
-    onSave: suspend () -> Unit,
+    onSave: suspend () -> Boolean,
     onDiscardChanges: () -> Unit,
 ): UnsavedChangesGuardState {
     var showDialog by remember { mutableStateOf(false) }
@@ -76,8 +76,9 @@ fun rememberUnsavedChangesGuard(
                 TextButton(onClick = {
                     showDialog = false
                     scope.launch {
-                        onSaveState.value()
-                        onNavigateBackState.value()
+                        if (onSaveState.value()) {
+                            onNavigateBackState.value()
+                        }
                     }
                 }) { Text(stringResource(R.string.save)) }
             },

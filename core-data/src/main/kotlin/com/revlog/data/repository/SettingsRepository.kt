@@ -3,6 +3,7 @@ package com.revlog.data.repository
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -15,11 +16,13 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 
 data class AppSettings(
     val languageTag: String = LocalePreferences.DEFAULT_TAG,
+    val remindersEnabled: Boolean = true,
 )
 
 class SettingsRepository(private val context: Context) {
     private object Keys {
         val LANGUAGE = stringPreferencesKey("language_tag")
+        val REMINDERS_ENABLED = booleanPreferencesKey("reminders_enabled")
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { prefs -> readSettings(prefs) }
@@ -45,8 +48,13 @@ class SettingsRepository(private val context: Context) {
         LocalePreferences.write(context, normalized)
     }
 
+    suspend fun setRemindersEnabled(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.REMINDERS_ENABLED] = enabled }
+    }
+
     private fun readSettings(prefs: Preferences) = AppSettings(
         languageTag = prefs[Keys.LANGUAGE]?.takeIf { it in LocalePreferences.SUPPORTED_TAGS }
             ?: LocalePreferences.read(context),
+        remindersEnabled = prefs[Keys.REMINDERS_ENABLED] ?: true,
     )
 }

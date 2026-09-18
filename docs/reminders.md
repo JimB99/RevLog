@@ -1,56 +1,28 @@
-# Maintenance reminders (future)
+# Maintenance reminders
 
-RevLog v1 does not schedule notifications. `POST_NOTIFICATIONS` is declared in the manifest for a future release.
+**Status: implemented** (RevLog 1.1.0)
 
-## Goal
+Users configure reminders per vehicle and service type via the bell icon on each service row.
 
-Let users configure reminders per vehicle and service type, e.g.:
+## Model
 
-- Motorölwechsel every 12 months
-- Pickerl every 24 months
-- Custom interval: 6 / 12 / 24 / 36 months or user-defined
+See `ReminderRule` in `core-domain` and `reminder_rules` Room table in `core-data`.
 
-## Proposed model
+## Due date calculation
 
-```kotlin
-data class ReminderRule(
-    val id: Long,
-    val vehicleId: Long,
-    val target: ServiceType,
-    val intervalMonths: Int,
-    val leadDays: Int = 14,
-    val enabled: Boolean = true,
-    val anchor: ReminderAnchor = ReminderAnchor.LAST_SERVICE_DATE,
-)
+`NextDueCalculator.nextDue(rule, lastServiceDate)` — last service date plus interval months.
 
-enum class ReminderAnchor {
-    LAST_SERVICE_DATE,
-    FIXED_DATE,
-}
-```
+`NextDueCalculator.shouldNotify(rule, lastServiceDate, today)` — true when today is within `leadDays` before due.
 
-## Due date calculation (`core-domain`)
+## Scheduling
 
-Pure function `NextDueCalculator.nextDue(rule, logs, vehicleData, today)`:
+- `ReminderCheckWorker` — daily WorkManager job
+- Master toggle: Settings → **Erinnerungen**
+- Notification channel: **Wartung**
+- Tap opens vehicle Service tab
 
-1. Find last service log for `rule.target`.
-2. If present: `nextDue = lastDate + intervalMonths`.
-3. Else optional fallback: Erstzulassung or purchase date (user setting).
-4. Notify when `today >= nextDue - leadDays`.
+## UI
 
-## Scheduling (`app` module)
-
-- `ReminderCheckWorker` — daily WorkManager job (same pattern as Gatekeep `UsageSyncWorker`).
-- Scan enabled rules, post notification if due.
-- Notification channel: **Wartung**.
-- Tap opens vehicle Service tab.
-
-## UI (future)
-
-- Settings → **Erinnerungen** (master toggle).
-- Service row long-press → **Erinnerung einrichten**.
-- Presets: 6 Monate, 1 Jahr, 2 Jahre, 3 Jahre, Benutzerdefiniert.
-
-## Why WorkManager
-
-Daily batch is sufficient for maintenance windows, survives reboots, and avoids per-rule `AlarmManager` complexity.
+- Bell icon on each service row (filled when reminder enabled)
+- Row tap still adds a service entry
+- `ReminderSetupSheet` — interval presets 6 / 12 / 24 / 36 months + custom, lead days picker

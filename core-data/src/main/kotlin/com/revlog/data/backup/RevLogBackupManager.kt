@@ -1,7 +1,12 @@
 package com.revlog.data.backup
 
+import com.revlog.data.tire.LegacyTireMigration
+import com.revlog.domain.DateParser
 import com.revlog.domain.model.ServiceLogEntry
 import com.revlog.domain.model.ServiceType
+import com.revlog.domain.model.TirePosition
+import com.revlog.domain.model.TireRow
+import com.revlog.domain.model.TireSet
 import com.revlog.domain.model.Vehicle
 import com.revlog.domain.model.VehicleBundle
 import com.revlog.domain.model.VehicleData
@@ -20,7 +25,7 @@ data class RevLogBackup(
     val vehicles: List<VehicleBackup> = emptyList(),
 ) {
     companion object {
-        const val CURRENT_VERSION = 1
+        const val CURRENT_VERSION = 2
     }
 }
 
@@ -52,11 +57,26 @@ data class VehicleDataBackup(
     val tirePressureRear: String? = null,
     val tirePressureLoaded: String? = null,
     val tirePressureUnladen: String? = null,
+    val tireSets: List<TireSetBackup> = emptyList(),
     val powerKw: Int? = null,
     val powerPs: Int? = null,
     val displacementCc: Int? = null,
     val engineOil: String? = null,
     val brakeFluid: String? = null,
+)
+
+@Serializable
+data class TireSetBackup(
+    val rows: List<TireRowBackup> = emptyList(),
+)
+
+@Serializable
+data class TireRowBackup(
+    val position: String,
+    val dimensions: String? = null,
+    val pressureLoaded: String? = null,
+    val pressureUnladen: String? = null,
+    val pressure: String? = null,
 )
 
 @Serializable
@@ -105,11 +125,19 @@ object RevLogBackupManager {
         firstRegistration = firstRegistration?.toString(),
         purchasedAt = purchasedAt?.toString(),
         purchasedKm = purchasedKm,
-        tireDimensions = tireDimensions,
-        tirePressureFront = tirePressureFront,
-        tirePressureRear = tirePressureRear,
-        tirePressureLoaded = tirePressureLoaded,
-        tirePressureUnladen = tirePressureUnladen,
+        tireSets = tireSets.map { set ->
+            TireSetBackup(
+                rows = set.rows.map { row ->
+                    TireRowBackup(
+                        position = row.position.name,
+                        dimensions = row.dimensions,
+                        pressureLoaded = row.pressureLoaded,
+                        pressureUnladen = row.pressureUnladen,
+                        pressure = row.pressure,
+                    )
+                },
+            )
+        },
         powerKw = powerKw,
         powerPs = powerPs,
         displacementCc = displacementCc,
@@ -135,34 +163,57 @@ object RevLogBackupManager {
                 sortOrder = vehicle.sortOrder,
                 createdAt = vehicle.createdAt,
             ),
-            data = VehicleData(
-                vehicleId = vehicleId,
-                licensePlate = data.licensePlate,
-                vin = data.vin,
-                firstRegistration = data.firstRegistration?.let(LocalDate::parse),
-                purchasedAt = data.purchasedAt?.let(LocalDate::parse),
-                purchasedKm = data.purchasedKm,
-                tireDimensions = data.tireDimensions,
-                tirePressureFront = data.tirePressureFront,
-                tirePressureRear = data.tirePressureRear,
-                tirePressureLoaded = data.tirePressureLoaded,
-                tirePressureUnladen = data.tirePressureUnladen,
-                powerKw = data.powerKw,
-                powerPs = data.powerPs,
-                displacementCc = data.displacementCc,
-                engineOil = data.engineOil,
-                brakeFluid = data.brakeFluid,
-            ),
+            data = data.toDomain(vehicleId),
             serviceLogs = serviceLogs.map { log ->
                 ServiceLogEntry(
                     id = 0,
                     vehicleId = vehicleId,
                     type = ServiceType.valueOf(log.type),
-                    performedAt = LocalDate.parse(log.performedAt),
+                    performedAt = DateParser.parseOrNull(log.performedAt)
+                        ?: LocalDate.parse(log.performedAt),
                     odometerKm = log.odometerKm,
                     note = log.note,
                 )
             },
+        )
+    }
+
+    private fun VehicleDataBackup.toDomain(vehicleId: Long): VehicleData {
+        val sets = when {
+            tireSets.isNotEmpty() -> tireSets.map { set ->
+                TireSet(
+                    rows = set.rows.map { row ->
+                        TireRow(
+                            position = TirePosition.valueOf(row.position),
+                            dimensions = row.dimensions,
+                            pressureLoaded = row.pressureLoaded,
+                            pressureUnladen = row.pressureUnladen,
+                            pressure = row.pressure,
+                        )
+                    },
+                )
+            }
+            else -> LegacyTireMigration.toTireSets(
+                tireDimensions,
+                tirePressureFront,
+                tirePressureRear,
+                tirePressureLoaded,
+                tirePressureUnladen,
+            )
+        }
+        return VehicleData(
+            vehicleId = vehicleId,
+            licensePlate = licensePlate,
+            vin = vin,
+            firstRegistration = firstRegistration?.let(DateParser::parseOrNull),
+            purchasedAt = purchasedAt?.let(DateParser::parseOrNull),
+            purchasedKm = purchasedKm,
+            tireSets = sets,
+            powerKw = powerKw,
+            powerPs = powerPs,
+            displacementCc = displacementCc,
+            engineOil = engineOil,
+            brakeFluid = brakeFluid,
         )
     }
 }

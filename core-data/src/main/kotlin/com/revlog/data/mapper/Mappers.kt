@@ -3,6 +3,8 @@ package com.revlog.data.mapper
 import com.revlog.data.local.entity.ServiceLogEntryEntity
 import com.revlog.data.local.entity.VehicleDataEntity
 import com.revlog.data.local.entity.VehicleEntity
+import com.revlog.data.tire.TireSetCodec
+import com.revlog.domain.DateParser
 import com.revlog.domain.model.ServiceLogEntry
 import com.revlog.domain.model.ServiceType
 import com.revlog.domain.model.Vehicle
@@ -34,14 +36,10 @@ fun VehicleDataEntity.toDomain(): VehicleData = VehicleData(
     vehicleId = vehicleId,
     licensePlate = licensePlate,
     vin = vin,
-    firstRegistration = firstRegistration?.let(LocalDate::parse),
-    purchasedAt = purchasedAt?.let(LocalDate::parse),
+    firstRegistration = firstRegistration?.let(DateParser::parseOrNull),
+    purchasedAt = purchasedAt?.let(DateParser::parseOrNull),
     purchasedKm = purchasedKm,
-    tireDimensions = tireDimensions,
-    tirePressureFront = tirePressureFront,
-    tirePressureRear = tirePressureRear,
-    tirePressureLoaded = tirePressureLoaded,
-    tirePressureUnladen = tirePressureUnladen,
+    tireSets = TireSetCodec.decode(tireSetsJson),
     powerKw = powerKw,
     powerPs = powerPs,
     displacementCc = displacementCc,
@@ -56,23 +54,24 @@ fun VehicleData.toEntity(): VehicleDataEntity = VehicleDataEntity(
     firstRegistration = firstRegistration?.toString(),
     purchasedAt = purchasedAt?.toString(),
     purchasedKm = purchasedKm,
-    tireDimensions = tireDimensions,
-    tirePressureFront = tirePressureFront,
-    tirePressureRear = tirePressureRear,
-    tirePressureLoaded = tirePressureLoaded,
-    tirePressureUnladen = tirePressureUnladen,
+    tireDimensions = null,
+    tirePressureFront = null,
+    tirePressureRear = null,
+    tirePressureLoaded = null,
+    tirePressureUnladen = null,
     powerKw = powerKw,
     powerPs = powerPs,
     displacementCc = displacementCc,
     engineOil = engineOil,
     brakeFluid = brakeFluid,
+    tireSetsJson = if (tireSets.isEmpty()) null else TireSetCodec.encode(tireSets),
 )
 
 fun ServiceLogEntryEntity.toDomain(): ServiceLogEntry = ServiceLogEntry(
     id = id,
     vehicleId = vehicleId,
     type = ServiceType.valueOf(type),
-    performedAt = LocalDate.parse(performedAt),
+    performedAt = DateParser.parseOrNull(performedAt) ?: LocalDate.parse(performedAt),
     odometerKm = odometerKm,
     note = note,
 )
@@ -93,11 +92,7 @@ fun emptyVehicleData(vehicleId: Long): VehicleData = VehicleData(
     firstRegistration = null,
     purchasedAt = null,
     purchasedKm = null,
-    tireDimensions = null,
-    tirePressureFront = null,
-    tirePressureRear = null,
-    tirePressureLoaded = null,
-    tirePressureUnladen = null,
+    tireSets = emptyList(),
     powerKw = null,
     powerPs = null,
     displacementCc = null,

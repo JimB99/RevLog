@@ -3,15 +3,12 @@ package com.revlog.app.ui.components
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import com.revlog.app.R
+import com.revlog.domain.DateParser
 import com.revlog.domain.model.ServiceType
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-private val dateFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy")
-
-fun formatDate(date: LocalDate?): String =
-    date?.format(dateFormatter) ?: ""
+fun formatDate(date: LocalDate?): String = DateParser.format(date)
 
 @Composable
 fun formatOptional(value: String?): String =
