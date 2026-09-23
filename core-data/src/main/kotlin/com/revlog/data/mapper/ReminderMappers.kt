@@ -15,6 +15,7 @@ fun ReminderRuleEntity.toDomain(): ReminderRule = ReminderRule(
     enabled = enabled,
     anchor = ReminderAnchor.valueOf(anchor),
     lastNotifiedDueDate = lastNotifiedDueDate?.let(DateParser::parseOrNull),
+    notifyTimeMinutes = notifyTimeMinutes,
 )
 
 fun ReminderRule.toEntity(): ReminderRuleEntity = ReminderRuleEntity(
@@ -26,4 +27,5 @@ fun ReminderRule.toEntity(): ReminderRuleEntity = ReminderRuleEntity(
     enabled = enabled,
     anchor = anchor.name,
     lastNotifiedDueDate = lastNotifiedDueDate?.toString(),
+    notifyTimeMinutes = notifyTimeMinutes,
 )

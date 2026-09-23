@@ -59,15 +59,18 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.revlog.app.R
 import com.revlog.app.ui.components.FormField
 import com.revlog.app.ui.components.SaveChangesButton
+import com.revlog.app.ui.components.SelectableContent
 import com.revlog.app.ui.components.formatDate
 import com.revlog.app.ui.components.formatOptional
 import com.revlog.app.ui.components.rememberUnsavedChangesGuard
 import com.revlog.app.ui.components.serviceTypeLabel
 import com.revlog.app.ui.viewmodel.ServiceEntryViewModel
 import com.revlog.app.ui.viewmodel.ServiceLogsViewModel
+import com.revlog.app.ui.viewmodel.SettingsViewModel
 import com.revlog.app.ui.viewmodel.VehicleDetailViewModel
-import com.revlog.app.worker.ReminderCheckWorker
 import com.revlog.domain.DateParser
+import com.revlog.domain.DecimalSeparator
+import com.revlog.domain.InputNormalizer
 import com.revlog.domain.PowerConversion
 import com.revlog.domain.ServiceSummaryResolver
 import com.revlog.domain.model.ServiceType
@@ -85,11 +88,13 @@ fun VehicleDetailScreen(
     onAddService: (ServiceType) -> Unit,
     onViewLogs: (ServiceType) -> Unit,
     viewModel: VehicleDetailViewModel = hiltViewModel(),
+    settingsViewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val vehicle by viewModel.vehicle.collectAsState()
     val data by viewModel.vehicleData.collectAsState()
     val summary by viewModel.serviceSummary.collectAsState()
     val reminderRules by viewModel.reminderRules.collectAsState()
+    val settings by settingsViewModel.settings.collectAsState()
     var selectedTab by rememberSaveable(vehicleId) {
         mutableIntStateOf(initialTab.coerceIn(0, 1))
     }
@@ -146,6 +151,7 @@ fun VehicleDetailScreen(
                     0 -> DatenTab(
                         data = data,
                         vehicleType = vehicle?.type,
+                        languageTag = settings.languageTag,
                         onEdit = onEditData,
                     )
                     1 -> ServiceTab(
@@ -171,13 +177,14 @@ fun VehicleDetailScreen(
             serviceType = type,
             existing = existing,
             vehicleId = vehicleId,
+            defaultNotifyTimeMinutes = settings.defaultNotifyTimeMinutes,
             onDismiss = { reminderType = null },
             onSave = { rule ->
                 viewModel.saveReminderRule(rule)
                 if (rule.enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                 }
-                ReminderCheckWorker.schedule(context)
+                viewModel.rescheduleReminders(context)
             },
         )
     }
@@ -187,8 +194,11 @@ fun VehicleDetailScreen(
 private fun DatenTab(
     data: VehicleData?,
     vehicleType: com.revlog.domain.model.VehicleType?,
+    languageTag: String,
     onEdit: () -> Unit,
 ) {
+    val decimalSeparator = DecimalSeparator.forLanguageTag(languageTag)
+    SelectableContent {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -228,11 +238,18 @@ private fun DatenTab(
         }
         DataRow(
             "${stringResource(R.string.power_kw)} / ${stringResource(R.string.power_ps)}",
-            when {
-                data?.powerKw != null && data.powerPs != null -> "${data.powerKw} kW / ${data.powerPs} PS"
-                data?.powerKw != null -> "${data.powerKw} kW"
-                data?.powerPs != null -> "${data.powerPs} PS"
-                else -> formatOptional(null)
+            run {
+                val powerKw = data?.powerKw
+                val powerPs = data?.powerPs
+                when {
+                    powerKw != null && powerPs != null -> {
+                        "${PowerConversion.formatPower(powerKw, decimalSeparator)} kW / " +
+                            "${PowerConversion.formatPower(powerPs, decimalSeparator)} PS"
+                    }
+                    powerKw != null -> "${PowerConversion.formatPower(powerKw, decimalSeparator)} kW"
+                    powerPs != null -> "${PowerConversion.formatPower(powerPs, decimalSeparator)} PS"
+                    else -> formatOptional(null)
+                }
             },
         )
         DataRow(
@@ -241,6 +258,7 @@ private fun DatenTab(
         )
         DataRow(stringResource(R.string.engine_oil), formatOptional(data?.engineOil))
         DataRow(stringResource(R.string.brake_fluid), formatOptional(data?.brakeFluid))
+    }
     }
 }
 
@@ -262,6 +280,7 @@ private fun ServiceTab(
     onReminder: (ServiceType) -> Unit,
 ) {
     val types = vehicleType?.let { ServiceSummaryResolver.applicableTypes(it) } ?: emptyList()
+    SelectableContent {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -281,6 +300,7 @@ private fun ServiceTab(
                 onReminder = { onReminder(type) },
             )
         }
+    }
     }
 }
 
@@ -323,9 +343,13 @@ private fun CardServiceRow(
 fun VehicleDataEditScreen(
     onBack: () -> Unit,
     viewModel: VehicleDetailViewModel = hiltViewModel(),
+    settingsViewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val vehicle by viewModel.vehicle.collectAsState()
     val initial by viewModel.vehicleData.collectAsState()
+    val settings by settingsViewModel.settings.collectAsState()
+    val languageTag = settings.languageTag
+    val decimalSeparator = DecimalSeparator.forLanguageTag(languageTag)
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val datePlaceholder = stringResource(R.string.date_placeholder)
@@ -341,8 +365,16 @@ fun VehicleDataEditScreen(
     }
     var purchasedKm by remember(initial) { mutableStateOf(initial?.purchasedKm?.toString() ?: "") }
     var tireSets by remember(initial) { mutableStateOf(initial?.tireSets ?: emptyList()) }
-    var powerKw by remember(initial) { mutableStateOf(initial?.powerKw?.toString() ?: "") }
-    var powerPs by remember(initial) { mutableStateOf(initial?.powerPs?.toString() ?: "") }
+    var powerKw by remember(initial, languageTag) {
+        mutableStateOf(
+            initial?.powerKw?.let { PowerConversion.formatPower(it, decimalSeparator) } ?: "",
+        )
+    }
+    var powerPs by remember(initial, languageTag) {
+        mutableStateOf(
+            initial?.powerPs?.let { PowerConversion.formatPower(it, decimalSeparator) } ?: "",
+        )
+    }
     var displacementCc by remember(initial) { mutableStateOf(initial?.displacementCc?.toString() ?: "") }
     var engineOil by remember(initial) { mutableStateOf(initial?.engineOil ?: "") }
     var brakeFluid by remember(initial) { mutableStateOf(initial?.brakeFluid ?: "") }
@@ -365,8 +397,8 @@ fun VehicleDataEditScreen(
             purchasedAt = DateParser.parseOrNull(purchasedAt),
             purchasedKm = purchasedKm.trim().toIntOrNull(),
             tireSets = tireSets,
-            powerKw = powerKw.trim().toIntOrNull(),
-            powerPs = powerPs.trim().toIntOrNull(),
+            powerKw = PowerConversion.parsePower(powerKw, decimalSeparator),
+            powerPs = PowerConversion.parsePower(powerPs, decimalSeparator),
             displacementCc = displacementCc.trim().toIntOrNull(),
             engineOil = engineOil.trim().ifBlank { null },
             brakeFluid = brakeFluid.trim().ifBlank { null },
@@ -381,8 +413,8 @@ fun VehicleDataEditScreen(
             dateFieldDirty(purchasedAt, snapshot.purchasedAt) ||
             purchasedKm.trim() != snapshot.purchasedKm?.toString().orEmpty() ||
             tireSets != snapshot.tireSets ||
-            powerKw.trim() != snapshot.powerKw?.toString().orEmpty() ||
-            powerPs.trim() != snapshot.powerPs?.toString().orEmpty() ||
+            PowerConversion.parsePower(powerKw, decimalSeparator) != snapshot.powerKw ||
+            PowerConversion.parsePower(powerPs, decimalSeparator) != snapshot.powerPs ||
             displacementCc.trim() != snapshot.displacementCc?.toString().orEmpty() ||
             engineOil.trim() != snapshot.engineOil.orEmpty().trim() ||
             brakeFluid.trim() != snapshot.brakeFluid.orEmpty().trim()
@@ -409,8 +441,8 @@ fun VehicleDataEditScreen(
             purchasedAt = DateParser.format(initial?.purchasedAt)
             purchasedKm = initial?.purchasedKm?.toString() ?: ""
             tireSets = initial?.tireSets ?: emptyList()
-            powerKw = initial?.powerKw?.toString() ?: ""
-            powerPs = initial?.powerPs?.toString() ?: ""
+            powerKw = initial?.powerKw?.let { PowerConversion.formatPower(it, decimalSeparator) } ?: ""
+            powerPs = initial?.powerPs?.let { PowerConversion.formatPower(it, decimalSeparator) } ?: ""
             displacementCc = initial?.displacementCc?.toString() ?: ""
             engineOil = initial?.engineOil ?: ""
             brakeFluid = initial?.brakeFluid ?: ""
@@ -440,35 +472,46 @@ fun VehicleDataEditScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            FormField(R.string.license_plate, licensePlate) { licensePlate = it }
-            FormField(R.string.vin, vin) { vin = it }
+            FormField(R.string.license_plate, licensePlate, languageTag) { licensePlate = it }
+            FormField(R.string.vin, vin, languageTag) { vin = it }
             FormField(
                 labelRes = R.string.first_registration,
                 value = firstRegistration,
+                languageTag = languageTag,
                 placeholder = datePlaceholder,
+                normalizeDecimal = false,
                 isError = dateError && !DateParser.isValidDisplayInput(firstRegistration),
                 onValueChange = { firstRegistration = it; dateError = false },
             )
             FormField(
                 labelRes = R.string.purchased_at,
                 value = purchasedAt,
+                languageTag = languageTag,
                 placeholder = datePlaceholder,
+                normalizeDecimal = false,
                 isError = dateError && !DateParser.isValidDisplayInput(purchasedAt),
                 onValueChange = { purchasedAt = it; dateError = false },
             )
-            FormField(R.string.purchased_km, purchasedKm) { purchasedKm = it }
+            FormField(R.string.purchased_km, purchasedKm, languageTag) { purchasedKm = it }
             Text(stringResource(R.string.tire_dimensions), style = MaterialTheme.typography.titleSmall)
             vehicle?.type?.let { type ->
                 TireSetsEditor(
                     tireSets = tireSets,
                     vehicleType = type,
+                    languageTag = languageTag,
                     onChange = { tireSets = it },
                 )
             }
-            PowerRow(kw = powerKw, ps = powerPs, onKwChange = { powerKw = it }, onPsChange = { powerPs = it })
-            FormField(R.string.displacement, displacementCc) { displacementCc = it }
-            FormField(R.string.engine_oil, engineOil) { engineOil = it }
-            FormField(R.string.brake_fluid, brakeFluid) { brakeFluid = it }
+            PowerRow(
+                kw = powerKw,
+                ps = powerPs,
+                languageTag = languageTag,
+                onKwChange = { powerKw = it },
+                onPsChange = { powerPs = it },
+            )
+            FormField(R.string.displacement, displacementCc, languageTag) { displacementCc = it }
+            FormField(R.string.engine_oil, engineOil, languageTag) { engineOil = it }
+            FormField(R.string.brake_fluid, brakeFluid, languageTag) { brakeFluid = it }
             SaveChangesButton(
                 visible = isDirty,
                 onClick = {
@@ -493,10 +536,18 @@ fun VehicleDataEditScreen(
 private fun PowerRow(
     kw: String,
     ps: String,
+    languageTag: String,
     onKwChange: (String) -> Unit,
     onPsChange: (String) -> Unit,
 ) {
     val focusManager = LocalFocusManager.current
+    val decimalSeparator = DecimalSeparator.forLanguageTag(languageTag)
+
+    fun sanitizePowerInput(raw: String): String {
+        var value = InputNormalizer.normalizeDecimalSeparator(raw, decimalSeparator)
+        return InputNormalizer.sanitizeSingleLine(value)
+    }
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -505,8 +556,16 @@ private fun PowerRow(
         OutlinedTextField(
             value = kw,
             onValueChange = {
-                onKwChange(it)
-                it.toIntOrNull()?.let { value -> onPsChange(PowerConversion.kwToPs(value).toString()) }
+                val sanitized = sanitizePowerInput(it)
+                onKwChange(sanitized)
+                PowerConversion.parsePower(sanitized, decimalSeparator)?.let { value ->
+                    onPsChange(
+                        PowerConversion.formatPower(
+                            PowerConversion.kwToPs(value),
+                            decimalSeparator,
+                        ),
+                    )
+                }
             },
             label = { Text(stringResource(R.string.power_kw)) },
             singleLine = true,
@@ -517,8 +576,16 @@ private fun PowerRow(
         OutlinedTextField(
             value = ps,
             onValueChange = {
-                onPsChange(it)
-                it.toIntOrNull()?.let { value -> onKwChange(PowerConversion.psToKw(value).toString()) }
+                val sanitized = sanitizePowerInput(it)
+                onPsChange(sanitized)
+                PowerConversion.parsePower(sanitized, decimalSeparator)?.let { value ->
+                    onKwChange(
+                        PowerConversion.formatPower(
+                            PowerConversion.psToKw(value),
+                            decimalSeparator,
+                        ),
+                    )
+                }
             },
             label = { Text(stringResource(R.string.power_ps)) },
             singleLine = true,
@@ -534,7 +601,10 @@ private fun PowerRow(
 fun ServiceEntryScreen(
     onBack: () -> Unit,
     viewModel: ServiceEntryViewModel = hiltViewModel(),
+    settingsViewModel: SettingsViewModel = hiltViewModel(),
 ) {
+    val settings by settingsViewModel.settings.collectAsState()
+    val languageTag = settings.languageTag
     var dateText by remember { mutableStateOf(DateParser.format(LocalDate.now())) }
     var odometer by remember { mutableStateOf("") }
     var note by remember { mutableStateOf("") }
@@ -569,12 +639,14 @@ fun ServiceEntryScreen(
             FormField(
                 labelRes = R.string.service_date,
                 value = dateText,
+                languageTag = languageTag,
                 placeholder = datePlaceholder,
+                normalizeDecimal = false,
                 isError = dateError,
                 onValueChange = { dateText = it; dateError = false },
             )
-            FormField(R.string.odometer, odometer) { odometer = it }
-            FormField(R.string.note, note) { note = it }
+            FormField(R.string.odometer, odometer, languageTag) { odometer = it }
+            FormField(R.string.note, note, languageTag) { note = it }
             Button(
                 onClick = {
                     val date = DateParser.parseOrNull(dateText)
@@ -615,6 +687,7 @@ fun ServiceLogsScreen(
             )
         },
     ) { padding ->
+        SelectableContent {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -645,6 +718,7 @@ fun ServiceLogsScreen(
                     )
                 }
             }
+        }
         }
     }
 

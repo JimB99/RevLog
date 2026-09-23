@@ -16,6 +16,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import com.revlog.app.import.RevLogImport
 import com.revlog.app.notification.RevLogNotificationHelper
 import com.revlog.app.ui.RevLogNavHost
 import com.revlog.app.ui.theme.RevLogTheme
@@ -33,7 +34,7 @@ class MainActivity : AppCompatActivity() {
     @Inject lateinit var settingsRepository: SettingsRepository
 
     private val importViewModel: ImportViewModel by viewModels()
-    private var startImportReview by mutableStateOf(false)
+    private var importRequestId by mutableStateOf(0)
     private var startVehicleId by mutableStateOf<Long?>(null)
     private var startOnServiceTab by mutableStateOf(false)
 
@@ -57,7 +58,7 @@ class MainActivity : AppCompatActivity() {
             RevLogTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     RevLogNavHost(
-                        startImportReview = startImportReview,
+                        importRequestId = importRequestId,
                         startVehicleId = startVehicleId,
                         startOnServiceTab = startOnServiceTab,
                     )
@@ -82,10 +83,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun handleImportIntent(intent: Intent?) {
-        val uri = intent?.data ?: return
-        if (intent.action != Intent.ACTION_VIEW) return
-        val json = contentResolver.openInputStream(uri)?.bufferedReader()?.readText() ?: return
+        if (intent == null) return
+        val json = RevLogImport.readJsonFromIntent(this, intent) ?: return
         importViewModel.parseImport(json)
-        startImportReview = true
+        importRequestId++
     }
 }

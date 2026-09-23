@@ -39,8 +39,8 @@ data class VehicleDataEntity(
     val tirePressureRear: String?,
     val tirePressureLoaded: String?,
     val tirePressureUnladen: String?,
-    val powerKw: Int?,
-    val powerPs: Int?,
+    val powerKw: Double?,
+    val powerPs: Double?,
     val displacementCc: Int?,
     val engineOil: String?,
     val brakeFluid: String?,
@@ -71,6 +71,7 @@ data class ReminderRuleEntity(
     val enabled: Boolean = true,
     val anchor: String = "LAST_SERVICE_DATE",
     val lastNotifiedDueDate: String? = null,
+    val notifyTimeMinutes: Int? = null,
 )
 
 @Entity(

@@ -19,7 +19,7 @@ import com.revlog.data.local.entity.VehicleEntity
         ServiceLogEntryEntity::class,
         ReminderRuleEntity::class,
     ],
-    version = 2,
+    version = 4,
     exportSchema = true,
 )
 abstract class RevLogDatabase : RoomDatabase() {

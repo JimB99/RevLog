@@ -58,6 +58,35 @@ class RevLogBackupManagerTest {
     }
 
     @Test
+    fun `v2 backup imports integer and string power fields`() {
+        val json = """
+        {
+          "version": 2,
+          "app": "RevLog",
+          "vehicles": [{
+            "exportId": "id-1",
+            "vehicle": {"name": "Car", "type": "CAR"},
+            "data": {
+              "powerKw": 100,
+              "powerPs": "136,0"
+            },
+            "serviceLogs": []
+          }]
+        }
+        """.trimIndent()
+        val restored = RevLogBackupManager.toBundles(RevLogBackupManager.import(json)).single()
+        assertEquals(100.0, restored.data.powerKw)
+        assertEquals(136.0, restored.data.powerPs)
+    }
+
+    @Test
+    fun `looksLikeBackup accepts valid revlog json`() {
+        val json = RevLogBackupManager.export(listOf(sampleBundle()))
+        assertEquals(true, RevLogBackupManager.looksLikeBackup(json))
+        assertEquals(false, RevLogBackupManager.looksLikeBackup("""{"app":"Other","version":1}"""))
+    }
+
+    @Test
     fun `rejects unsupported backup version`() {
         val json = """{"version":99,"app":"RevLog","vehicles":[]}"""
         assertThrows(IllegalArgumentException::class.java) {
@@ -89,8 +118,8 @@ class RevLogBackupManagerTest {
                     ),
                 ),
             ),
-            powerKw = 100,
-            powerPs = 136,
+            powerKw = 100.0,
+            powerPs = 136.0,
             displacementCc = 999,
             engineOil = "10W-40",
             brakeFluid = "DOT 4",

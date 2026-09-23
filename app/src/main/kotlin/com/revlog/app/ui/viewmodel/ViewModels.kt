@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.revlog.data.backup.RevLogBackupManager
 import com.revlog.data.locale.LocalePreferences
 import com.revlog.data.repository.ReminderRepository
+import android.content.Context
+import com.revlog.app.worker.ReminderScheduler
 import com.revlog.data.repository.SettingsRepository
 import com.revlog.data.repository.VehicleRepository
 import com.revlog.domain.model.ReminderRule
@@ -68,6 +70,7 @@ class VehicleDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val vehicleRepository: VehicleRepository,
     private val reminderRepository: ReminderRepository,
+    private val settingsRepository: SettingsRepository,
 ) : ViewModel() {
     private val vehicleId: Long = savedStateHandle.get<Long>("vehicleId") ?: 0L
 
@@ -102,6 +105,12 @@ class VehicleDetailViewModel @Inject constructor(
 
     suspend fun saveVehicleDataAwait(data: VehicleData) {
         vehicleRepository.upsertVehicleData(data)
+    }
+
+    fun rescheduleReminders(context: Context) {
+        viewModelScope.launch {
+            ReminderScheduler.reschedule(context, reminderRepository, settingsRepository)
+        }
     }
 }
 
@@ -210,6 +219,7 @@ class ImportViewModel @Inject constructor(
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
+    private val reminderRepository: ReminderRepository,
 ) : ViewModel() {
     val settings = settingsRepository.settings
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), com.revlog.data.repository.AppSettings())
@@ -221,6 +231,13 @@ class SettingsViewModel @Inject constructor(
     fun setRemindersEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setRemindersEnabled(enabled)
+        }
+    }
+
+    fun setDefaultNotifyTimeMinutes(context: Context, minutes: Int) {
+        viewModelScope.launch {
+            settingsRepository.setDefaultNotifyTimeMinutes(minutes)
+            ReminderScheduler.reschedule(context, reminderRepository, settingsRepository)
         }
     }
 }

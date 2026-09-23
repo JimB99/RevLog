@@ -13,4 +13,5 @@ data class ReminderRule(
     val enabled: Boolean = true,
     val anchor: ReminderAnchor = ReminderAnchor.LAST_SERVICE_DATE,
     val lastNotifiedDueDate: java.time.LocalDate? = null,
+    val notifyTimeMinutes: Int? = null,
 )

@@ -58,8 +58,10 @@ data class VehicleDataBackup(
     val tirePressureLoaded: String? = null,
     val tirePressureUnladen: String? = null,
     val tireSets: List<TireSetBackup> = emptyList(),
-    val powerKw: Int? = null,
-    val powerPs: Int? = null,
+    @Serializable(with = FlexibleNullableDoubleSerializer::class)
+    val powerKw: Double? = null,
+    @Serializable(with = FlexibleNullableDoubleSerializer::class)
+    val powerPs: Double? = null,
     val displacementCc: Int? = null,
     val engineOil: String? = null,
     val brakeFluid: String? = null,
@@ -88,21 +90,32 @@ data class ServiceLogBackup(
 )
 
 object RevLogBackupManager {
-    private val json = Json {
+    private val exportJson = Json {
         prettyPrint = true
         ignoreUnknownKeys = true
     }
 
+    private val importJson = Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+    }
+
     fun export(bundles: List<VehicleBundle>): String =
-        json.encodeToString(RevLogBackup(vehicles = bundles.map { it.toBackup() }))
+        exportJson.encodeToString(RevLogBackup(vehicles = bundles.map { it.toBackup() }))
 
     fun import(data: String): RevLogBackup {
-        val backup = json.decodeFromString<RevLogBackup>(data)
+        val backup = importJson.decodeFromString<RevLogBackup>(data.trim())
         require(backup.version <= RevLogBackup.CURRENT_VERSION) {
             "Unsupported backup version: ${backup.version}"
         }
         return backup
     }
+
+    fun looksLikeBackup(data: String): Boolean =
+        runCatching {
+            val backup = import(data)
+            backup.app.equals("RevLog", ignoreCase = true)
+        }.getOrDefault(false)
 
     fun toBundles(backup: RevLogBackup): List<VehicleBundle> =
         backup.vehicles.map { it.toBundle() }

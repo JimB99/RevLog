@@ -31,7 +31,7 @@
     <string name="first_registration">Erstzulassung</string>
     <string name="purchased_at">Gekauft am</string>
     <string name="purchased_km">KM-Stand beim Kauf</string>
-    <string name="tire_dimensions">Reifendimensionen</string>
+    <string name="tire_dimensions">Reifen</string>
     <string name="tire_pressure">Reifendruck</string>
     <string name="tire_pressure_front">Vorne</string>
     <string name="tire_pressure_rear">Hinten</string>
@@ -96,4 +96,7 @@
     <string name="notification_channel_maintenance">Wartung</string>
     <string name="reminder_notification_title">%1$s — Wartung fällig</string>
     <string name="reminder_notification_body">%1$s steht an</string>
+    <string name="settings_default_notify_time">Standard-Erinnerungszeit</string>
+    <string name="reminder_notify_time">Erinnerungszeit</string>
+    <string name="reminder_use_default">Standard verwenden</string>
 </resources>

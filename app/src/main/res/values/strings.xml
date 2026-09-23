@@ -31,7 +31,7 @@
     <string name="first_registration">First registration</string>
     <string name="purchased_at">Purchased on</string>
     <string name="purchased_km">Mileage at purchase</string>
-    <string name="tire_dimensions">Tire dimensions</string>
+    <string name="tire_dimensions">Tires</string>
     <string name="tire_pressure">Tire pressure</string>
     <string name="tire_pressure_front">Front</string>
     <string name="tire_pressure_rear">Rear</string>
@@ -96,4 +96,7 @@
     <string name="notification_channel_maintenance">Maintenance</string>
     <string name="reminder_notification_title">%1$s — maintenance due</string>
     <string name="reminder_notification_body">%1$s is due</string>
+    <string name="settings_default_notify_time">Default reminder time</string>
+    <string name="reminder_notify_time">Reminder time</string>
+    <string name="reminder_use_default">Use default</string>
 </resources>

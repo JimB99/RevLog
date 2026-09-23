@@ -8,6 +8,10 @@ object DatabaseBootstrap {
 
     fun open(context: Context): RevLogDatabase =
         Room.databaseBuilder(context, RevLogDatabase::class.java, DB_NAME)
-            .addMigrations(RevLogMigrations.MIGRATION_1_2)
+            .addMigrations(
+                RevLogMigrations.MIGRATION_1_2,
+                RevLogMigrations.MIGRATION_2_3,
+                RevLogMigrations.MIGRATION_3_4,
+            )
             .build()
 }

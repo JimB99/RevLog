@@ -38,15 +38,17 @@ object Routes {
 
 @Composable
 fun RevLogNavHost(
-    startImportReview: Boolean = false,
+    importRequestId: Int = 0,
     startVehicleId: Long? = null,
     startOnServiceTab: Boolean = false,
 ) {
     val navController = rememberNavController()
 
-    androidx.compose.runtime.LaunchedEffect(startImportReview) {
-        if (startImportReview) {
-            navController.navigate(Routes.IMPORT_REVIEW)
+    androidx.compose.runtime.LaunchedEffect(importRequestId) {
+        if (importRequestId > 0) {
+            navController.navigate(Routes.IMPORT_REVIEW) {
+                launchSingleTop = true
+            }
         }
     }
 

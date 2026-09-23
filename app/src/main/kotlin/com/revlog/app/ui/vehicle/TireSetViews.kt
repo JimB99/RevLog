@@ -20,6 +20,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.revlog.app.R
+import com.revlog.app.ui.components.SelectableContent
+import com.revlog.domain.DecimalSeparator
+import com.revlog.domain.InputNormalizer
 import com.revlog.domain.TireDisplayResolver
 import com.revlog.domain.model.TirePosition
 import com.revlog.domain.model.TireRow
@@ -31,9 +34,10 @@ fun TireSetsReadOnlySection(
     tireSets: List<TireSet>,
     vehicleType: VehicleType,
 ) {
+    SelectableContent {
     if (tireSets.isEmpty()) {
         Text(text = stringResource(R.string.empty))
-        return
+        return@SelectableContent
     }
     tireSets.forEachIndexed { index, set ->
         val rows = TireDisplayResolver.visibleRows(set, vehicleType)
@@ -42,6 +46,7 @@ fun TireSetsReadOnlySection(
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
         }
         TireSetReadOnlyTable(rows = rows, vehicleType = vehicleType)
+    }
     }
 }
 
@@ -117,6 +122,7 @@ private fun TireSetReadOnlyTable(
 fun TireSetsEditor(
     tireSets: List<TireSet>,
     vehicleType: VehicleType,
+    languageTag: String,
     onChange: (List<TireSet>) -> Unit,
 ) {
     val sets = if (tireSets.isEmpty()) {
@@ -132,6 +138,7 @@ fun TireSetsEditor(
             TireSetEditor(
                 set = set,
                 vehicleType = vehicleType,
+                languageTag = languageTag,
                 onChange = { updated ->
                     onChange(sets.toMutableList().also { it[setIndex] = updated })
                 },
@@ -153,6 +160,7 @@ fun TireSetsEditor(
 private fun TireSetEditor(
     set: TireSet,
     vehicleType: VehicleType,
+    languageTag: String,
     onChange: (TireSet) -> Unit,
 ) {
     val rows = TireDisplayResolver.editorRows(set, vehicleType)
@@ -166,6 +174,7 @@ private fun TireSetEditor(
             FormFieldValue(
                 label = stringResource(R.string.tire_dimensions_col),
                 value = row.dimensions ?: "",
+                languageTag = languageTag,
                 onValueChange = { value ->
                     onChange(set.withRow(rowIndex, row.copy(dimensions = value.ifBlank { null })))
                 },
@@ -174,6 +183,7 @@ private fun TireSetEditor(
                 FormFieldValue(
                     label = stringResource(R.string.tire_pressure_loaded),
                     value = row.pressureLoaded ?: "",
+                    languageTag = languageTag,
                     onValueChange = { value ->
                         onChange(set.withRow(rowIndex, row.copy(pressureLoaded = value.ifBlank { null })))
                     },
@@ -181,6 +191,7 @@ private fun TireSetEditor(
                 FormFieldValue(
                     label = stringResource(R.string.tire_pressure_unladen),
                     value = row.pressureUnladen ?: "",
+                    languageTag = languageTag,
                     onValueChange = { value ->
                         onChange(set.withRow(rowIndex, row.copy(pressureUnladen = value.ifBlank { null })))
                     },
@@ -189,6 +200,7 @@ private fun TireSetEditor(
                 FormFieldValue(
                     label = stringResource(R.string.tire_pressure_col),
                     value = row.pressure ?: "",
+                    languageTag = languageTag,
                     onValueChange = { value ->
                         onChange(set.withRow(rowIndex, row.copy(pressure = value.ifBlank { null })))
                     },
@@ -202,14 +214,25 @@ private fun TireSetEditor(
 internal fun FormFieldValue(
     label: String,
     value: String,
+    languageTag: String,
     placeholder: String = "",
     isError: Boolean = false,
+    normalizeDecimal: Boolean = true,
     onValueChange: (String) -> Unit,
 ) {
     val focusManager = LocalFocusManager.current
+    val decimalSeparator = DecimalSeparator.forLanguageTag(languageTag)
     OutlinedTextField(
         value = value,
-        onValueChange = onValueChange,
+        onValueChange = { raw ->
+            var v = if (normalizeDecimal) {
+                InputNormalizer.normalizeDecimalSeparator(raw, decimalSeparator)
+            } else {
+                raw
+            }
+            v = InputNormalizer.sanitizeSingleLine(v)
+            onValueChange(v)
+        },
         label = { Text(label) },
         placeholder = if (placeholder.isNotBlank()) ({ Text(placeholder) }) else null,
         isError = isError,

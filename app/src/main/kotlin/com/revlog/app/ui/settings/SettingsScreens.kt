@@ -46,9 +46,12 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.revlog.app.BuildConfig
 import com.revlog.app.R
 import com.revlog.app.share.RevLogShare
+import com.revlog.app.ui.components.NotifyTimePickerDialog
+import com.revlog.app.ui.components.formatNotifyTime
 import com.revlog.app.ui.viewmodel.ExportViewModel
 import com.revlog.app.ui.viewmodel.ImportViewModel
 import com.revlog.app.ui.viewmodel.SettingsViewModel
+import com.revlog.app.ui.viewmodel.activityImportViewModel
 import com.revlog.app.util.LocaleController
 import com.revlog.domain.model.ImportConflictMode
 import com.revlog.domain.model.VehicleBundle
@@ -64,10 +67,21 @@ fun SettingsHubScreen(
     onNavigateExport: () -> Unit,
     onNavigateImportReview: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel(),
-    importViewModel: ImportViewModel = hiltViewModel(),
+    importViewModel: ImportViewModel = activityImportViewModel(),
 ) {
     val context = LocalContext.current
     val settings by viewModel.settings.collectAsState()
+    var showNotifyTimePicker by remember { mutableStateOf(false) }
+
+    if (showNotifyTimePicker) {
+        NotifyTimePickerDialog(
+            initialMinutes = settings.defaultNotifyTimeMinutes,
+            onDismiss = { showNotifyTimePicker = false },
+            onConfirm = { minutes ->
+                viewModel.setDefaultNotifyTimeMinutes(context, minutes)
+            },
+        )
+    }
     val importLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument(),
     ) { uri ->
@@ -106,6 +120,11 @@ fun SettingsHubScreen(
                         onCheckedChange = { viewModel.setRemindersEnabled(it) },
                     )
                 },
+            )
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.settings_default_notify_time)) },
+                supportingContent = { Text(formatNotifyTime(settings.defaultNotifyTimeMinutes)) },
+                modifier = Modifier.clickable { showNotifyTimePicker = true },
             )
             ListItem(
                 headlineContent = { Text(stringResource(R.string.language)) },
@@ -298,7 +317,7 @@ fun ExportScreen(
 fun ImportReviewScreen(
     onBack: () -> Unit,
     onDone: () -> Unit,
-    viewModel: ImportViewModel = hiltViewModel(),
+    viewModel: ImportViewModel = activityImportViewModel(),
 ) {
     val bundles by viewModel.pendingBundles.collectAsState()
     val error by viewModel.error.collectAsState()

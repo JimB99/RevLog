@@ -55,4 +55,167 @@ object RevLogMigrations {
             cursor.close()
         }
     }
+
+    val MIGRATION_2_3 = object : Migration(2, 3) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE reminder_rules ADD COLUMN notifyTimeMinutes INTEGER")
+            migrateVehicleDataPowerPsToReal(db)
+        }
+    }
+
+    private fun migrateVehicleDataPowerPsToReal(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS vehicle_data_new (
+                vehicleId INTEGER NOT NULL,
+                licensePlate TEXT,
+                vin TEXT,
+                firstRegistration TEXT,
+                purchasedAt TEXT,
+                purchasedKm INTEGER,
+                tireDimensions TEXT,
+                tirePressureFront TEXT,
+                tirePressureRear TEXT,
+                tirePressureLoaded TEXT,
+                tirePressureUnladen TEXT,
+                powerKw INTEGER,
+                powerPs REAL,
+                displacementCc INTEGER,
+                engineOil TEXT,
+                brakeFluid TEXT,
+                tireSetsJson TEXT,
+                PRIMARY KEY(vehicleId),
+                FOREIGN KEY(vehicleId) REFERENCES vehicles(id) ON DELETE CASCADE
+            )
+            """.trimIndent(),
+        )
+        db.execSQL(
+            """
+            INSERT INTO vehicle_data_new (
+                vehicleId,
+                licensePlate,
+                vin,
+                firstRegistration,
+                purchasedAt,
+                purchasedKm,
+                tireDimensions,
+                tirePressureFront,
+                tirePressureRear,
+                tirePressureLoaded,
+                tirePressureUnladen,
+                powerKw,
+                powerPs,
+                displacementCc,
+                engineOil,
+                brakeFluid,
+                tireSetsJson
+            )
+            SELECT
+                vehicleId,
+                licensePlate,
+                vin,
+                firstRegistration,
+                purchasedAt,
+                purchasedKm,
+                tireDimensions,
+                tirePressureFront,
+                tirePressureRear,
+                tirePressureLoaded,
+                tirePressureUnladen,
+                powerKw,
+                CAST(powerPs AS REAL),
+                displacementCc,
+                engineOil,
+                brakeFluid,
+                tireSetsJson
+            FROM vehicle_data
+            """.trimIndent(),
+        )
+        db.execSQL("DROP TABLE vehicle_data")
+        db.execSQL("ALTER TABLE vehicle_data_new RENAME TO vehicle_data")
+        db.execSQL(
+            "CREATE UNIQUE INDEX IF NOT EXISTS index_vehicle_data_vehicleId ON vehicle_data (vehicleId)",
+        )
+    }
+
+    val MIGRATION_3_4 = object : Migration(3, 4) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            migrateVehicleDataPowerKwToReal(db)
+        }
+    }
+
+    private fun migrateVehicleDataPowerKwToReal(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS vehicle_data_new (
+                vehicleId INTEGER NOT NULL,
+                licensePlate TEXT,
+                vin TEXT,
+                firstRegistration TEXT,
+                purchasedAt TEXT,
+                purchasedKm INTEGER,
+                tireDimensions TEXT,
+                tirePressureFront TEXT,
+                tirePressureRear TEXT,
+                tirePressureLoaded TEXT,
+                tirePressureUnladen TEXT,
+                powerKw REAL,
+                powerPs REAL,
+                displacementCc INTEGER,
+                engineOil TEXT,
+                brakeFluid TEXT,
+                tireSetsJson TEXT,
+                PRIMARY KEY(vehicleId),
+                FOREIGN KEY(vehicleId) REFERENCES vehicles(id) ON DELETE CASCADE
+            )
+            """.trimIndent(),
+        )
+        db.execSQL(
+            """
+            INSERT INTO vehicle_data_new (
+                vehicleId,
+                licensePlate,
+                vin,
+                firstRegistration,
+                purchasedAt,
+                purchasedKm,
+                tireDimensions,
+                tirePressureFront,
+                tirePressureRear,
+                tirePressureLoaded,
+                tirePressureUnladen,
+                powerKw,
+                powerPs,
+                displacementCc,
+                engineOil,
+                brakeFluid,
+                tireSetsJson
+            )
+            SELECT
+                vehicleId,
+                licensePlate,
+                vin,
+                firstRegistration,
+                purchasedAt,
+                purchasedKm,
+                tireDimensions,
+                tirePressureFront,
+                tirePressureRear,
+                tirePressureLoaded,
+                tirePressureUnladen,
+                CAST(powerKw AS REAL),
+                powerPs,
+                displacementCc,
+                engineOil,
+                brakeFluid,
+                tireSetsJson
+            FROM vehicle_data
+            """.trimIndent(),
+        )
+        db.execSQL("DROP TABLE vehicle_data")
+        db.execSQL("ALTER TABLE vehicle_data_new RENAME TO vehicle_data")
+        db.execSQL(
+            "CREATE UNIQUE INDEX IF NOT EXISTS index_vehicle_data_vehicleId ON vehicle_data (vehicleId)",
+        )
+    }
 }

@@ -12,10 +12,15 @@ import com.revlog.data.repository.ReminderRepository
 import com.revlog.data.repository.SettingsRepository
 import com.revlog.data.repository.VehicleRepository
 import com.revlog.domain.NextDueCalculator
+import com.revlog.domain.NotifyTimeResolver
 import com.revlog.app.R
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.flow.first
+import java.time.Duration
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
 import java.util.concurrent.TimeUnit
 
 @HiltWorker
@@ -32,9 +37,14 @@ class ReminderCheckWorker @AssistedInject constructor(
         val settings = settingsRepository.settings.first()
         if (!settings.remindersEnabled) return Result.success()
 
-        val today = java.time.LocalDate.now()
+        val today = LocalDate.now()
+        val now = LocalTime.now()
         val rules = reminderRepository.getAllEnabledRules()
         rules.forEach { rule ->
+            val effectiveMinutes = NotifyTimeResolver.effectiveMinutes(rule, settings.defaultNotifyTimeMinutes)
+            val notifyTime = LocalTime.of(effectiveMinutes / 60, effectiveMinutes % 60)
+            if (now.isBefore(notifyTime)) return@forEach
+
             val vehicle = vehicleRepository.observeVehicle(rule.vehicleId).first() ?: return@forEach
             val logs = vehicleRepository.observeServiceLogs(rule.vehicleId).first()
             val lastDate = logs.filter { it.type == rule.serviceType }
@@ -67,11 +77,26 @@ class ReminderCheckWorker @AssistedInject constructor(
     companion object {
         const val WORK_NAME = "reminder_check"
 
-        fun schedule(context: Context) {
-            val request = PeriodicWorkRequestBuilder<ReminderCheckWorker>(1, TimeUnit.DAYS).build()
+        fun millisUntilNext(notifyTimeMinutes: Int): Long {
+            val now = LocalDateTime.now()
+            var target = now.toLocalDate().atTime(
+                notifyTimeMinutes / 60,
+                notifyTimeMinutes % 60,
+            )
+            if (!target.isAfter(now)) {
+                target = target.plusDays(1)
+            }
+            return Duration.between(now, target).toMillis()
+        }
+
+        fun schedule(context: Context, notifyTimeMinutes: Int = 540) {
+            val delayMs = millisUntilNext(notifyTimeMinutes)
+            val request = PeriodicWorkRequestBuilder<ReminderCheckWorker>(1, TimeUnit.DAYS)
+                .setInitialDelay(delayMs, TimeUnit.MILLISECONDS)
+                .build()
             WorkManager.getInstance(context).enqueueUniquePeriodicWork(
                 WORK_NAME,
-                ExistingPeriodicWorkPolicy.KEEP,
+                ExistingPeriodicWorkPolicy.UPDATE,
                 request,
             )
         }

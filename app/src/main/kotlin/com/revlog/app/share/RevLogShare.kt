@@ -1,5 +1,6 @@
 package com.revlog.app.share
 
+import android.content.ClipData
 import android.content.Context
 import android.content.Intent
 import androidx.core.content.FileProvider
@@ -40,6 +41,9 @@ object RevLogShare {
         val intent = Intent(Intent.ACTION_SEND).apply {
             type = "application/vnd.revlog+json"
             putExtra(Intent.EXTRA_STREAM, uri)
+            putExtra(Intent.EXTRA_TITLE, file.name)
+            setDataAndType(uri, "application/vnd.revlog+json")
+            clipData = ClipData.newRawUri(file.name, uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
         context.startActivity(Intent.createChooser(intent, null))

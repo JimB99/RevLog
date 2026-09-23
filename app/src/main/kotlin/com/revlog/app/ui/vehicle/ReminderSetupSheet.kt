@@ -23,6 +23,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.revlog.app.R
+import com.revlog.app.ui.components.NotifyTimePickerDialog
+import com.revlog.app.ui.components.formatNotifyTime
 import com.revlog.domain.model.ReminderRule
 import com.revlog.domain.model.ServiceType
 
@@ -32,6 +34,7 @@ fun ReminderSetupSheet(
     serviceType: ServiceType,
     existing: ReminderRule?,
     vehicleId: Long,
+    defaultNotifyTimeMinutes: Int,
     onDismiss: () -> Unit,
     onSave: (ReminderRule) -> Unit,
 ) {
@@ -44,6 +47,27 @@ fun ReminderSetupSheet(
     }
     var customInterval by remember(existing) {
         mutableStateOf(existing?.intervalMonths?.toString() ?: "12")
+    }
+    var useDefaultTime by remember(existing) { mutableStateOf(existing?.notifyTimeMinutes == null) }
+    var customNotifyTimeMinutes by remember(existing) {
+        mutableIntStateOf(
+            existing?.notifyTimeMinutes ?: defaultNotifyTimeMinutes,
+        )
+    }
+    var showTimePicker by remember { mutableStateOf(false) }
+
+    val effectiveMinutes = if (useDefaultTime) {
+        defaultNotifyTimeMinutes
+    } else {
+        customNotifyTimeMinutes
+    }
+
+    if (showTimePicker) {
+        NotifyTimePickerDialog(
+            initialMinutes = customNotifyTimeMinutes,
+            onDismiss = { showTimePicker = false },
+            onConfirm = { customNotifyTimeMinutes = it },
+        )
     }
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
@@ -89,6 +113,27 @@ fun ReminderSetupSheet(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
+            Text(stringResource(R.string.reminder_notify_time))
+            Text(
+                text = formatNotifyTime(effectiveMinutes),
+                style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(stringResource(R.string.reminder_use_default))
+                Switch(checked = useDefaultTime, onCheckedChange = { useDefaultTime = it })
+            }
+            if (!useDefaultTime) {
+                Button(
+                    onClick = { showTimePicker = true },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(formatNotifyTime(customNotifyTimeMinutes))
+                }
+            }
             Button(
                 onClick = {
                     val resolvedLeadDays = leadDaysText.toIntOrNull() ?: leadDays
@@ -101,6 +146,7 @@ fun ReminderSetupSheet(
                             leadDays = resolvedLeadDays,
                             enabled = enabled,
                             lastNotifiedDueDate = existing?.lastNotifiedDueDate,
+                            notifyTimeMinutes = if (useDefaultTime) null else customNotifyTimeMinutes,
                         ),
                     )
                     onDismiss()
