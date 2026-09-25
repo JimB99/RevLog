@@ -38,7 +38,7 @@ keytool -genkeypair -v -keystore keystore/release.keystore -alias revlog \
 bash scripts/build_apk.sh
 ```
 
-APK output: **`dist/RevLog.apk`** (copied from Gradle’s `app/build/outputs/apk/release/app-release.apk`).
+APK output: **`dist/RevLog-<version>.apk`** (e.g. `dist/RevLog-1.1.3.apk`; copied from Gradle’s `app/build/outputs/apk/release/app-release.apk`).
 
 ## Export format
 
