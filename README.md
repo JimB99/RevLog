@@ -1,6 +1,16 @@
 # RevLog
 
-Personal vehicle logbook for cars and motorcycles. Track specs (Daten) and service history (Service), export/import `.revlog` files for backup or sharing.
+Personal vehicle logbook for cars and motorcycles—track specifications and service history, export/import `.revlog` backups.
+
+**Status:** Personal Android app; maintained for daily use. Default UI language is **German** (`de-AT`); `en-GB` and `es-ES` scaffolding exists. Screenshots: add PNGs under `docs/screenshots/` when available.
+
+---
+
+## Why
+
+RevLog keeps structured vehicle data and service entries offline-first in Room, with a versioned JSON backup format for sharing between devices.
+
+---
 
 ## Stack
 
@@ -8,47 +18,38 @@ Personal vehicle logbook for cars and motorcycles. Track specs (Daten) and servi
 - Hilt, Room, Navigation Compose
 - Modules: `app`, `core-domain`, `core-data`
 
+---
+
 ## Build
 
-Create `local.properties` (not committed) pointing at your Android SDK, e.g.:
-
-```properties
-sdk.dir=C\:\\path\\to\\android-sdk
-```
+See **[docs/BUILD.md](docs/BUILD.md)** for SDK paths, release keystore, and workspace toolchain.
 
 ```bash
-export JAVA_HOME="../.tools/jdk-17.0.14+7"
-export ANDROID_HOME="../.tools/android-sdk"
 ./gradlew assembleDebug
 ./scripts/check.sh
 ```
 
-### Release APK (arm64 only)
-
-**Prerequisite:** `keystore/release.keystore` must exist (not committed). Create once:
-
-```bash
-mkdir -p keystore
-keytool -genkeypair -v -keystore keystore/release.keystore -alias revlog \
-  -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android \
-  -dname "CN=RevLog, OU=Dev, O=RevLog, L=Local, ST=Local, C=AT"
-```
-
-```bash
-bash scripts/build_apk.sh
-```
-
-APK output: **`dist/RevLog-<version>.apk`** (e.g. `dist/RevLog-1.1.3.apk`; copied from Gradle’s `app/build/outputs/apk/release/app-release.apk`).
+---
 
 ## Export format
 
 Files use extension `.revlog` (JSON, versioned). See `core-data/.../RevLogBackupManager.kt`.
+
+---
 
 ## Localization
 
 - Default: German (`values-de-rAT`)
 - Infrastructure for `en-GB` and `es-ES` prepared
 
-## Future
+---
 
-Maintenance reminders are documented in [docs/reminders.md](docs/reminders.md).
+## Roadmap
+
+Maintenance reminders: [docs/reminders.md](docs/reminders.md).
+
+---
+
+## License
+
+MIT — see [LICENSE](LICENSE).
