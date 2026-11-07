@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.revlog.app.BuildConfig
 import com.revlog.app.R
+import com.revlog.app.legal.LegalUrls
 import com.revlog.app.share.RevLogShare
 import com.revlog.app.ui.components.NotifyTimePickerDialog
 import com.revlog.app.ui.components.formatNotifyTime
@@ -146,6 +147,9 @@ fun SettingsHubScreen(
                     Text(stringResource(R.string.version, BuildConfig.VERSION_NAME))
                 },
             )
+            LegalLinkListItem(R.string.legal_impressum, LegalUrls.IMPRESSUM)
+            LegalLinkListItem(R.string.legal_privacy, LegalUrls.PRIVACY)
+            LegalLinkListItem(R.string.legal_nutzung, LegalUrls.NUTZUNG)
         }
     }
 }
