@@ -149,7 +149,6 @@ fun SettingsHubScreen(
             )
             LegalLinkListItem(R.string.legal_impressum, LegalUrls.IMPRESSUM)
             LegalLinkListItem(R.string.legal_privacy, LegalUrls.PRIVACY)
-            LegalLinkListItem(R.string.legal_nutzung, LegalUrls.NUTZUNG)
         }
     }
 }
