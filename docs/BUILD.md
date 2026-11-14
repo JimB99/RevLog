@@ -1,6 +1,6 @@
 # Building RevLog
 
-Requirements: **JDK 17**, Android SDK (see `local.properties` for `sdk.dir`).
+Requirements: **JDK 17**, **Android SDK 36** (`compileSdk` / `targetSdk` in `app/build.gradle.kts`), see `local.properties` for `sdk.dir`.
 
 ## Standard toolchain
 
@@ -33,6 +33,9 @@ keytool -genkeypair -v -keystore keystore/release.keystore -alias revlog \
   -dname "CN=RevLog, OU=Dev, O=RevLog, L=Local, ST=Local, C=AT"
 
 bash scripts/build_apk.sh
+bash scripts/build_aab.sh
 ```
 
-APK: **`dist/RevLog-<version>.apk`**
+APK: **`dist/RevLog-<version>.apk`** (sideload)
+
+AAB: **`dist/RevLog-<version>.aab`** (Google Play)

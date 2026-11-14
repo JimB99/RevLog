@@ -2,7 +2,7 @@
 
 Personal vehicle logbook for cars and motorcycles—track specifications and service history, export/import `.revlog` backups.
 
-**Status:** Personal Android app; maintained for daily use. Default UI language is **German** (`de-AT`); `en-GB` and `es-ES` scaffolding exists. Screenshots: add PNGs under `docs/screenshots/` when available.
+**Status:** Personal Android app; maintained for daily use. Default UI language is **German** (`de-AT`); `en-GB` and `es-ES` scaffolding exists. Play listing copy (en/de/es) and graphics: **`docs/play-store/`**; phone screenshots: **`docs/screenshots/`**.
 
 ---
 

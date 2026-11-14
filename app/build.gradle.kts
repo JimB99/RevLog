@@ -9,13 +9,13 @@ plugins {
 
 android {
     namespace = "com.revlog.app"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.revlog.app"
+        applicationId = "at.bjbros.revlog"
         minSdk = 29
-        targetSdk = 35
-        versionCode = 7
+        targetSdk = 36
+        versionCode = 8
         versionName = "1.1.3"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ndk {
@@ -56,6 +56,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+            ndk {
+                debugSymbolLevel = "SYMBOL_TABLE"
+            }
         }
     }
 
@@ -71,6 +74,11 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+
+    lint {
+        // en-rGB / es-rES string sets are partial until those locales ship.
+        disable += "MissingTranslation"
     }
 
     packaging {

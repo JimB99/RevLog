@@ -23,7 +23,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <intent-filter>
+            <intent-filter tools:ignore="AppLinkUrlError">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.OPENABLE" />
@@ -31,7 +31,7 @@
                 <data android:mimeType="application/vnd.revlog+json" />
             </intent-filter>
 
-            <intent-filter>
+            <intent-filter tools:ignore="AppLinkUrlError">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.OPENABLE" />
@@ -40,7 +40,7 @@
                 <data android:pathPattern=".*\\.revlog" />
             </intent-filter>
 
-            <intent-filter>
+            <intent-filter tools:ignore="AppLinkUrlError">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.OPENABLE" />
@@ -49,7 +49,7 @@
                 <data android:pathPattern=".*\\.revlog" />
             </intent-filter>
 
-            <intent-filter>
+            <intent-filter tools:ignore="AppLinkUrlError">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.OPENABLE" />
@@ -58,7 +58,7 @@
                 <data android:pathPattern=".*\\.revlog" />
             </intent-filter>
 
-            <intent-filter>
+            <intent-filter tools:ignore="AppLinkUrlError">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:scheme="file" />
